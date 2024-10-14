@@ -39,3 +39,13 @@ test-py:
       coverage_report:
         coverage_format: cobertura
         path: coverage.xml
+
+stages:
+- test
+
+sast:
+  stage: test
+
+include:
+# SAST customization: https://docs.gitlab.com/ee/user/application_security/sast/#customizing-the-sast-settings
+- template: Security/SAST.gitlab-ci.yml
