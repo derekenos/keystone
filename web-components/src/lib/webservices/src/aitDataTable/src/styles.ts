@@ -27,6 +27,10 @@ export default [
       background-color: rgba(0, 0, 0, 0.04);
     }
 
+    data-table > table > tbody > tr.no-results:hover {
+      background-color: unset;
+    }
+
     data-table > table > thead > tr > th,
     data-table > table > tbody > tr > td {
       padding: 0.5rem;
@@ -222,7 +226,7 @@ export default [
       font-style: italic;
     }
 
-    data-table > table > tbody > tr > td.no-results {
+    data-table > table > tbody > tr.no-results > td {
       font-weight: bold;
     }
 

@@ -48,6 +48,7 @@ export class ArchCollectionsCard extends LitElement {
                     >No collections found.
                     <a
                       href="https://arch-webservices.zendesk.com/hc/en-us/articles/14795196010772"
+                      title="Contact us"
                       >Contact us</a
                     >
                     to access collections or report an error.</i

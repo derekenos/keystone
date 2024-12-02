@@ -89,6 +89,15 @@ export class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
     this.filterableColumns = [true, true, true, true, false, false];
     this.nonSelectionActionLabels = ["Generate a New Dataset"];
     this.nonSelectionActions = [Topics.GENERATE_DATASET];
+    this.noResultsMessage = createElement("span", {
+      children: [
+        "No datasets have been generated from this collection. ",
+        createElement("a", {
+          href: `/datasets/generate?cid=${this.collectionId}`,
+          textContent: "Generate a new dataset",
+        }),
+      ],
+    });
     this.singleName = "Dataset";
     this.sort = "-start_time";
     this.sortableColumns = [true, true, true, true, true, true];

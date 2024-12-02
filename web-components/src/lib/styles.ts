@@ -214,6 +214,10 @@ export const cardTable = css`
     background-color: #f7f7f7;
   }
 
+  tbody > tr.no-results:hover {
+    background-color: unset;
+  }
+
   th,
   td {
     text-align: left;

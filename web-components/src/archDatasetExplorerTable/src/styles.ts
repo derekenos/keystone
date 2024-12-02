@@ -34,6 +34,10 @@ export default [
       max-width: none;
     }
 
+    data-table > table > tbody > tr.no-results > td {
+      font-weight: normal;
+    }
+
     span.no-collection-access {
       cursor: not-allowed;
       text-decoration: underline;

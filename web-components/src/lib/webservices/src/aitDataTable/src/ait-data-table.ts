@@ -76,7 +76,7 @@ export class AitDataTable<RowT> extends LitElement {
   nonSelectionActionLabels: PropsT<RowT>["nonSelectionActionLabels"] = [];
   @property({ type: Array })
   nonSelectionActions: PropsT<RowT>["nonSelectionActions"] = [];
-  @property() noResultsText: PropsT<RowT>["noResultsText"] = "No Results";
+  @property() noResultsMessage: PropsT<RowT>["noResultsMessage"] = "No Results";
   @property() nullString: PropsT<RowT>["nullString"] = "—";
   @property({ type: Number }) pageLength: PropsT<RowT>["pageLength"] = 100;
   @property() pluralName: PropsT<RowT>["pluralName"] = "Items";
@@ -133,7 +133,7 @@ export class AitDataTable<RowT> extends LitElement {
         noInitialSearch: this.noInitialSearch,
         nonSelectionActionLabels: this.nonSelectionActionLabels,
         nonSelectionActions: this.nonSelectionActions,
-        noResultsText: this.noResultsText,
+        noResultsMessage: this.noResultsMessage,
         nullString: this.nullString,
         pageLength: this.pageLength,
         persistSearchStateInUrl: this.persistSearchStateInUrl,
