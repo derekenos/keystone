@@ -9,6 +9,10 @@ export default [
       padding: 1rem;
     }
 
+    button[slot="trigger"] {
+      font-size: var(--trigger-font-size, 1rem);
+    }
+
     div[role="dialog"] > h2 {
       font-size: 1rem;
       border-bottom: solid 1px #888;

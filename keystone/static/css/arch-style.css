@@ -146,11 +146,31 @@ div.dataset-info {
     width: 80%
 }
 
-div.dataset-download {
+div.dataset-download-column {
     display: flex;
     flex-direction: column;
     align-items: center;
     width: 20%
+}
+
+div.dataset-download-column > .colab-wrapper {
+  padding-top: 12px;
+  position: relative;
+}
+
+div.dataset-download-column > .colab-wrapper > arch-tooltip {
+  position: absolute;
+  right: -1.5rem;
+  bottom: 0rem;
+  --trigger-font-size: 1.2rem;
+}
+
+div.dataset-download-column > .colab-wrapper > img {
+  cursor: not-allowed;
+}
+
+div.dataset-download-column arch-tooltip {
+  display: inline-block;
 }
 
 button.download-button {
