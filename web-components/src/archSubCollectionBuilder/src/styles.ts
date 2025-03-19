@@ -15,6 +15,9 @@ export default [
 
     em {
       line-height: 1.2em;
+      display: block;
+      padding: 0.5rem 0;
+      color: #444;
     }
 
     arch-sub-collection-builder-submit-button {
@@ -35,6 +38,12 @@ export default [
     input#status,
     input#mime {
       width: 50%;
+    }
+
+    sp-theme {
+      --spectrum-font-size: 1rem;
+      --mod-tabs-font-size: 1rem;
+      --mod-tabs-font-weight: bold;
     }
   `,
 ];

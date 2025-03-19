@@ -30,7 +30,6 @@ from .validators import (
 from .helpers import is_uuid7
 from .plugins import get_plugin_apps
 
-
 # Define a namedtuple to return from JobStart.get_job_status()
 JobStatus = namedtuple("JobStatus", ("state", "start_time", "finished_time"))
 
@@ -219,7 +218,14 @@ class Collection(models.Model):
 
     @property
     def input_spec(self):
-        """Return the ARCH InputSpec object for this collection."""
+        """Return the ARCH InputSpec object dict for this collection."""
+        # pylint: disable-next=cyclic-import
+        from .schemas import (
+            LegacyCollectionInputSpec,
+            CDXDatasetInputSpec,
+            SpecialCollectionMetadata,
+        )
+
         if self.collection_type in (CollectionTypes.AIT, CollectionTypes.SPECIAL):
             # Return any explicitly-defined input spec for SPECIAL-type collections.
             if (
@@ -228,42 +234,24 @@ class Collection(models.Model):
                 and "input_spec" in self.metadata
                 and self.metadata["input_spec"]
             ):
-                return self.metadata["input_spec"]
+                return SpecialCollectionMetadata(**self.metadata).input_spec
             # Return a legacy collection-type input spec for AIT and SPECIAL collections.
-            return {"type": "collection", "collectionId": self.arch_id}
+            return LegacyCollectionInputSpec(collectionId=self.arch_id)
         # Handle CUSTOM collections.
         if self.collection_type == CollectionTypes.CUSTOM:
             if len(splits := self.arch_id.split("-", 1)) == 2 and is_uuid7(splits[1]):
                 # Return a CDX dataset type input spec for UUID-based custom collections.
-                return {"type": "dataset", "inputType": "cdx", "uuid": splits[1]}
+                return CDXDatasetInputSpec(uuid=splits[1])
             # Return a legacy collection-type input spec for legacy custom collections.
-            return {"type": "collection", "collectionId": self.arch_id}
+            return LegacyCollectionInputSpec(collectionId=self.arch_id)
         raise NotImplementedError
-
-    @staticmethod
-    def is_warc_type_input_spec(input_spec):
-        """Return whather the input_spec specifies a WARC-type collection."""
-        return (
-            input_spec["type"] == "collection"
-            or (
-                input_spec["type"] in ("dataset", "files")
-                and input_spec.get("inputType") in ("cdx", "warc")
-            )
-            or (
-                input_spec["type"] == "multi-specs"
-                and any(
-                    Collection.is_warc_type_input_spec(spec)
-                    for spec in input_spec["specs"]
-                )
-            )
-        )
 
     @property
     def user_runnable_job_types(self):
         """Return a list of user-runnable JobTypes."""
         # Define a base queryset for runnable, non-deprecated, JobTypes.
         job_type_qs = JobType.get_user_runnable()
-        if not self.is_warc_type_input_spec(self.input_spec):
+        if not self.input_spec.is_warc_type:
             job_type_qs = job_type_qs.exclude(id__in=settings.WARC_ONLY_JOB_IDS)
         return job_type_qs
 

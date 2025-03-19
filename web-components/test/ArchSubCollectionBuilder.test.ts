@@ -1,9 +1,17 @@
-import { assert, fixture, html, waitUntil } from "@open-wc/testing";
+import {
+  assert,
+  elementUpdated,
+  fixture,
+  html,
+  waitUntil,
+} from "@open-wc/testing";
 import { spy, stub } from "sinon";
 
 import ArchAPI from "../src/lib/ArchAPI";
 
 import "../src/archSubCollectionBuilder/index";
+import "../src/archInputAdder/index";
+import "../src/archModal/index";
 
 /*
  * Global stubs (WHERE DO THESE BELONG?)
@@ -12,33 +20,29 @@ import "../src/archSubCollectionBuilder/index";
 // Stub ArchAPI.collection.get to return a canned response.
 stub(ArchAPI, "collections").get(() => ({
   get: async () => ({
-    count: 2,
-    results: [
+    count: 1,
+    items: [
       {
-        id: "SPECIAL-test-collection-1",
+        id: 1,
         name: "ARCH Test Collection 1",
-        public: false,
-        size: "172.0 KB",
-        sortSize: 176128,
-        seeds: -1,
-        lastCrawlDate: null,
-        lastJobId: "WebGraphExtraction",
-        lastJobSample: true,
-        lastJobName: "Web graph (Sample)",
-        lastJobTime: "2023-07-17 20:22:34",
+        collection_type: "SPECIAL",
+        size_bytes: 176128,
+        dataset_count: 40,
+        latest_dataset: {
+          id: 106,
+          name: "Word processing file information",
+          start_time: "2025-04-15T22:28:41.978Z",
+        },
+        metadata: null,
       },
       {
-        id: "SPECIAL-test-collection-2",
+        id: 2,
         name: "ARCH Test Collection 2",
-        public: false,
-        size: "172.0 KB",
-        sortSize: 176128,
-        seeds: -1,
-        lastCrawlDate: null,
-        lastJobId: "WebGraphExtraction",
-        lastJobSample: true,
-        lastJobName: "Web graph (Sample)",
-        lastJobTime: "2023-07-17 20:22:34",
+        collection_type: "SPECIAL",
+        size_bytes: 176128,
+        dataset_count: 0,
+        latest_dataset: {},
+        metadata: null,
       },
     ],
   }),
@@ -48,6 +52,35 @@ stub(ArchAPI, "collections").get(() => ({
  * Fixtures
  */
 
+class InputAdderProxy {
+  /*
+   * <input>-compatible interface proxy for ArchInputAdder component.
+   */
+  constructor(instance) {
+    this.instance = instance;
+    this.input = instance.input;
+    this.name = instance.inputName;
+  }
+  set value(value) {
+    this.input.value = value;
+    this.instance.addInputValue();
+  }
+  get validationMessage() {
+    return this.input.validationMessage;
+  }
+  get dispatchEvent() {
+    return this.input.dispatchEvent.bind(this.input);
+  }
+  checkValidity() {
+    return this.input.validationMessage === "";
+  }
+  reset() {
+    this.instance.values = [];
+    this.input.value = "";
+    this.input.setCustomValidity("");
+  }
+}
+
 async function elInputsMapPair() {
   /*
    * Return a pair comprising a ArchSubCollectionBuilder element fixture
@@ -56,18 +89,15 @@ async function elInputsMapPair() {
   const el = await fixture(
     html`<arch-sub-collection-builder></arch-sub-collection-builder>`
   );
-  const form = el.shadowRoot.querySelector("form");
-  // Stub the el.form @query prop which seems to always return undefined
-  // when under test.
-  stub(el, "form").get(() => form);
+
   // Wait for collections to be initialized.
-  el.update();
-  const sourcesEl = form.querySelector("select[name=sources]");
+  el.requestUpdate();
+  await el.updateComplete;
+  const sourcesEl = el.form.querySelector("select[name=sources]");
   await waitUntil(() => sourcesEl.options.length === 2);
   const inputNames = [
     "sources",
     "name",
-    "surtPrefixesOR",
     "timestampFrom",
     "timestampTo",
     "statusPrefixesOR",
@@ -76,7 +106,11 @@ async function elInputsMapPair() {
   return [
     el,
     Object.fromEntries(
-      inputNames.map((n) => [n, form.querySelector(`[name="${n}"]`)])
+      inputNames
+        .map((n) => [n, el.form.querySelector(`[name="${n}"]`)])
+        .concat([
+          ["surtPrefixesOR", new InputAdderProxy(el.surtPrefixInputAdder)],
+        ])
     ),
   ];
 }
@@ -94,15 +128,29 @@ async function elInputPair(inputName) {
  * Helpers
  */
 
-function assertInputIsValid(el, inputEl, inputValue, decodedValue) {
+function assertInputIsValid(
+  el,
+  inputEl,
+  inputValue,
+  decodedValue,
+  preSendValue
+) {
   // Set the input to the specified value.
   inputEl.value = inputValue;
   // Decode the form data and use it to set form validity.
   const formData = el.formData;
   el.setFormInputValidity(formData);
+
   // Assert that the input state is valid and decoded value is as expected.
   assert.isTrue(inputEl.checkValidity());
+
   assert.deepEqual(formData[inputEl.name], decodedValue);
+  if (preSendValue !== undefined) {
+    assert.deepEqual(
+      el.prepareFormDataForSend(formData)[inputEl.name],
+      preSendValue
+    );
+  }
 }
 
 function assertInputIsInvalid(
@@ -125,7 +173,10 @@ function assertInputIsInvalid(
     fullCustomValidation ||
       `Please correct the invalid value(s): ${badValsStr ?? inputValue.trim()}`
   );
-  assert.instanceOf(formData[inputEl.name], Error);
+  // Do not check for presence of Error in formData for surtPrefixesOR.
+  if (inputEl.name !== "surtPrefixesOR") {
+    assert.instanceOf(formData[inputEl.name], Error);
+  }
   // Assert that the next input event clears the custom validity state.
   inputEl.dispatchEvent(new Event("input", { bubbles: true }));
   assert.isTrue(inputEl.checkValidity());
@@ -141,64 +192,52 @@ describe("ArchSubCollectionBuilder", () => {
    * SURT Prefix(es) form input tests
    */
   describe("surt prefixes form input", () => {
-    // Test the empty string filtering that's applied to all optional inputs.
-    it("filters out empty string values", async () => {
+    it("accepts and decodes valid single values", async () => {
       const [el, inputEl] = await elInputPair("surtPrefixesOR");
-      for (const [inputVal, decodedVal] of [
-        ["", undefined],
-        ["   ", undefined],
-        ["|||||", undefined],
-        ["  |  | | || |       |", undefined],
+      // Ensure that the SURT Prefix(es) tab is selected to prevent value overwrite'
+      // via call to syncUrlSurtPrefixes().
+      el.urlSurtPrefixTabs.selected = "surtPrefixes";
+      // Expect preSendVal to have the trailing domain-part comma removed.
+      for (const [inputVal, decodedVal, preSendVal] of [
+        ["org,archive", ["org,archive"], ["org,archive"]],
+        ["org,arch-ive", ["org,arch-ive"], ["org,arch-ive"]], // hyphen is valid label char
+        ["org,archive,", ["org,archive,"], ["org,archive,"]],
+        ["org,archive,books,", ["org,archive,books,"], ["org,archive,books,"]],
+        ["org,archive)/", ["org,archive)/"], ["org,archive)/"]],
+        ["org,archive)/a", ["org,archive)/a"], ["org,archive)/a"]],
+        ["org,archive)/a/b", ["org,archive)/a/b"], ["org,archive)/a/b"]],
+        [
+          "org,archive)/a/b?c=1",
+          ["org,archive)/a/b?c=1"],
+          ["org,archive)/a/b?c=1"],
+        ],
       ]) {
-        assertInputIsValid(el, inputEl, inputVal, decodedVal);
+        assertInputIsValid(el, inputEl, inputVal, decodedVal, preSendVal);
+        inputEl.reset();
       }
     });
 
-    it("accepts and decodes a single valid value", async () => {
+    it("accepts and decodes valid multiple values", async () => {
       const [el, inputEl] = await elInputPair("surtPrefixesOR");
-      for (const [inputVal, decodedVal] of [
-        ["org,archive", ["org,archive"]],
-        ["org,arch-ive", ["org,arch-ive"]], // hyphen is valid label char
-        ["org,archive)", ["org,archive)"]],
-        ["org,archive)/", ["org,archive)/"]],
-        ["org,archive)/a", ["org,archive)/a"]],
-        ["org,archive)/a/b", ["org,archive)/a/b"]],
-        ["org,archive)/a/b?c=1", ["org,archive)/a/b?c=1"]],
-      ]) {
-        assertInputIsValid(el, inputEl, inputVal, decodedVal);
+      // Ensure that the SURT Prefix(es) tab is selected to prevent value overwrite'
+      // via call to syncUrlSurtPrefixes().
+      el.urlSurtPrefixTabs.selected = "surtPrefixes";
+      const vals = [
+        "com,example,",
+        "com,example)/",
+        "com,example)/1/2/3?q=search",
+      ];
+      // Expect preSendVals to have been sorted.
+      const preSendVals = [
+        "com,example)/",
+        "com,example)/1/2/3?q=search",
+        "com,example,",
+      ];
+      // Manually add all but the last value, which we'll pass to assertInputIsValid.
+      for (const x of vals.slice(0, -1)) {
+        inputEl.value = x;
       }
-    });
-
-    it("accepts and decodes multiple, delimited valid values", async () => {
-      const [el, inputEl] = await elInputPair("surtPrefixesOR");
-      for (const [inputVal, decodedVal] of [
-        [
-          "org,archive|org,archive-it)/a/b/?c=1",
-          ["org,archive", "org,archive-it)/a/b/?c=1"],
-        ],
-        [
-          "org,archive)|org,archive-it)/a/b",
-          ["org,archive)", "org,archive-it)/a/b"],
-        ],
-        [
-          "org,archive)/|org,archive-it)/a",
-          ["org,archive)/", "org,archive-it)/a"],
-        ],
-        [
-          "org,archive)/a|org,archive-it)/",
-          ["org,archive)/a", "org,archive-it)/"],
-        ],
-        [
-          "org,archive)/a/b|org,archive-it)",
-          ["org,archive)/a/b", "org,archive-it)"],
-        ],
-        [
-          "org,archive)/a/b?c=1|org,archive-it",
-          ["org,archive)/a/b?c=1", "org,archive-it"],
-        ],
-      ]) {
-        assertInputIsValid(el, inputEl, inputVal, decodedVal);
-      }
+      assertInputIsValid(el, inputEl, vals[vals.length - 1], vals, preSendVals);
     });
 
     it("rejects invalid single values", async () => {
@@ -217,24 +256,8 @@ describe("ArchSubCollectionBuilder", () => {
           el,
           inputEl,
           inputVal,
-          null,
-          `Please correct the invalid SURT(s): ${inputVal}`
-        );
-      }
-    });
-
-    it("rejects invalid, multiple, delimited values", async () => {
-      const [el, inputEl] = await elInputPair("surtPrefixesOR");
-      for (const [inputVal, badValsStr] of [
-        ["org,archive|org,", ["org,"]],
-        ["org,archive|org,|org,archive)/|org,archive/", ["org,, org,archive/"]],
-      ]) {
-        assertInputIsInvalid(
-          el,
-          inputEl,
-          inputVal,
-          null,
-          `Please correct the invalid SURT(s): ${badValsStr}`
+          undefined,
+          "Enter a valid SURT"
         );
       }
     });
@@ -246,11 +269,11 @@ describe("ArchSubCollectionBuilder", () => {
   describe("crawl date start form input", () => {
     it("decodes to ARCH timestamp string", async () => {
       const [el, inputEl] = await elInputPair("timestampFrom");
-      for (const [inputVal, decodedVal] of [
+      for (const [val, preSendVal] of [
         ["2023-08-08T12:00", "20230808120000"],
         ["2023-08-08T12:59", "20230808125900"],
       ]) {
-        assertInputIsValid(el, inputEl, inputVal, decodedVal);
+        assertInputIsValid(el, inputEl, val, val, preSendVal);
       }
     });
   });
@@ -261,11 +284,11 @@ describe("ArchSubCollectionBuilder", () => {
   describe("crawl date end form input", () => {
     it("decodes to ARCH timestamp string", async () => {
       const [el, inputEl] = await elInputPair("timestampTo");
-      for (const [inputVal, decodedVal] of [
+      for (const [val, preSendVal] of [
         ["2023-08-08T12:00", "20230808120000"],
         ["2023-08-08T12:59", "20230808125900"],
       ]) {
-        assertInputIsValid(el, inputEl, inputVal, decodedVal);
+        assertInputIsValid(el, inputEl, val, val, preSendVal);
       }
     });
   });
@@ -280,11 +303,13 @@ describe("ArchSubCollectionBuilder", () => {
         el,
         inputsMap.timestampFrom,
         "2023-08-08T12:00",
+        "2023-08-08T12:00",
         "20230808120000"
       );
       assertInputIsValid(
         el,
         inputsMap.timestampTo,
+        "2023-08-08T12:01",
         "2023-08-08T12:01",
         "20230808120100"
       );
@@ -295,6 +320,7 @@ describe("ArchSubCollectionBuilder", () => {
       assertInputIsValid(
         el,
         inputsMap.timestampFrom,
+        "2023-08-08T12:01",
         "2023-08-08T12:01",
         "20230808120100"
       );
@@ -312,6 +338,7 @@ describe("ArchSubCollectionBuilder", () => {
       assertInputIsValid(
         el,
         inputsMap.timestampFrom,
+        "2023-08-08T12:01",
         "2023-08-08T12:01",
         "20230808120100"
       );
@@ -331,28 +358,28 @@ describe("ArchSubCollectionBuilder", () => {
   describe("status code form input", () => {
     it("accepts and decodes a single valid value", async () => {
       const [el, inputEl] = await elInputPair("statusPrefixesOR");
-      for (const [inputVal, decodedVal] of [
-        ["100", ["100"]],
-        ["200", ["200"]],
-        ["302", ["302"]],
-        ["400", ["400"]],
-        ["404", ["404"]],
-        ["503", ["503"]],
-        ["599", ["599"]],
+      for (const [inputVal, decodedVal, preSendVal] of [
+        ["100", ["100"], [100]],
+        ["200", ["200"], [200]],
+        ["302", ["302"], [302]],
+        ["400", ["400"], [400]],
+        ["404", ["404"], [404]],
+        ["503", ["503"], [503]],
+        ["599", ["599"], [599]],
       ]) {
-        assertInputIsValid(el, inputEl, inputVal, decodedVal);
+        assertInputIsValid(el, inputEl, inputVal, decodedVal, preSendVal);
       }
     });
 
     it("accepts and decodes multiple, valid, delimited values", async () => {
       const [el, inputEl] = await elInputPair("statusPrefixesOR");
-      for (const [inputVal, decodedVal] of [
-        ["100|200", ["100", "200"]],
-        ["302|400", ["302", "400"]],
-        ["404|503", ["404", "503"]],
-        ["599|", ["599"]],
+      for (const [inputVal, decodedVal, preSendVal] of [
+        ["100|200", ["100", "200"], [100, 200]],
+        ["302|400", ["302", "400"], [302, 400]],
+        ["404|503", ["404", "503"], [404, 503]],
+        ["599|", ["599"], [599]],
       ]) {
-        assertInputIsValid(el, inputEl, inputVal, decodedVal);
+        assertInputIsValid(el, inputEl, inputVal, decodedVal, preSendVal);
       }
     });
 
@@ -393,7 +420,7 @@ describe("ArchSubCollectionBuilder", () => {
   describe("mime type form input", () => {
     it("accepts and decodes a single valid value", async () => {
       const [el, inputEl] = await elInputPair("mimesOR");
-      for (const [inputVal, decodedVal] of [
+      for (const [inputVal, decodedAndPreSendVal] of [
         ["text/html", ["text/html"]],
         ["application/json", ["application/json"]],
         ["audio/aac", ["audio/aac"]],
@@ -411,18 +438,30 @@ describe("ArchSubCollectionBuilder", () => {
         ["text/richtext", ["text/richtext"]],
         ["video/mpeg", ["video/mpeg"]],
       ]) {
-        assertInputIsValid(el, inputEl, inputVal, decodedVal);
+        assertInputIsValid(
+          el,
+          inputEl,
+          inputVal,
+          decodedAndPreSendVal,
+          decodedAndPreSendVal
+        );
       }
     });
 
     it("accepts and decodes multiple, valid, delimited values", async () => {
       const [el, inputEl] = await elInputPair("mimesOR");
-      for (const [inputVal, decodedVal] of [
+      for (const [inputVal, decodedAndPreSendVal] of [
         ["text/html|application/json", ["text/html", "application/json"]],
         ["audio/aac|font/collection", ["audio/aac", "font/collection"]],
         ["image/bmp|model/step", ["image/bmp", "model/step"]],
       ]) {
-        assertInputIsValid(el, inputEl, inputVal, decodedVal);
+        assertInputIsValid(
+          el,
+          inputEl,
+          inputVal,
+          decodedAndPreSendVal,
+          decodedAndPreSendVal
+        );
       }
     });
 
@@ -480,65 +519,74 @@ describe("ArchSubCollectionBuilder", () => {
    * Form submit payload tests
    */
   describe("form submission", () => {
-    it("hits the UserDefinedQuery/{collectionName} endpoint for a single source", async () => {
+    it("POSTs the expected single-input-collection payload to /api/collections/custom", async () => {
       const [el, inputsMap] = await elInputsMapPair();
       // Select a single input collection.
       Array.from(inputsMap.sources.options)
-        .filter((x) => x.value === "SPECIAL-test-collection-1")
+        .filter((x) => x.value === "1")
         .map((x) => (x.selected = true));
       // Enter values for the remaining input fields.
       inputsMap.name.value = "ARCH Test Collection - HTML Only 3";
-      inputsMap.surtPrefixesOR.value = "org,archive|org,archive-it";
+      // The InputAdderProxy will aggregate values if you assign multiple times.
+      inputsMap.surtPrefixesOR.value = "org,archive";
+      inputsMap.surtPrefixesOR.value = "org,archive-it";
       inputsMap.timestampFrom.value = "2023-08-15T12:00";
       inputsMap.timestampTo.value = "2023-08-16T12:00";
       inputsMap.statusPrefixesOR.value = "200|403";
       inputsMap.mimesOR.value = "text/html|text/css";
       // Do the submit.
       const doPostSpy = spy(el, "doPost");
-      el.form.querySelector("button[type=submit]").click();
+      // Click the confirmation modal confirm button.
+      el.submitButton.shadowRoot
+        .querySelector("arch-modal")
+        .shadowRoot.querySelector("button.primary")
+        .click();
       // Check the payload.
       assert.isTrue(
-        doPostSpy.calledWith("SPECIAL-test-collection-1", {
+        doPostSpy.calledWith({
+          sources: ["1"],
           name: "ARCH Test Collection - HTML Only 3",
           surtPrefixesOR: ["org,archive", "org,archive-it"],
           timestampFrom: "20230815120000",
           timestampTo: "20230816120000",
-          statusPrefixesOR: ["200", "403"],
+          statusPrefixesOR: [200, 403],
           mimesOR: ["text/html", "text/css"],
         })
       );
     });
 
-    it("hits the UserDefinedQuery/UNION-UDQ endpoint for multiple sources", async () => {
+    it("POSTs the expected multi-input-collection payload to /api/collections/custom", async () => {
       const [el, inputsMap] = await elInputsMapPair();
       // Select multiple input collections.
       Array.from(inputsMap.sources.options)
-        .filter(
-          (x) =>
-            x.value === "SPECIAL-test-collection-1" ||
-            x.value === "SPECIAL-test-collection-2"
-        )
+        .filter((x) => x.value === "1" || x.value === "2")
         .map((x) => (x.selected = true));
       // Enter values for the remaining input fields.
       inputsMap.name.value = "ARCH Test Collection - HTML Only 3";
-      inputsMap.surtPrefixesOR.value = "org,archive|org,archive-it";
+      // The InputAdderProxy will aggregate values if you assign multiple times.
+      inputsMap.surtPrefixesOR.value = "org,archive";
+      inputsMap.surtPrefixesOR.value = "org,archive-it";
       inputsMap.timestampFrom.value = "2023-08-15T12:00";
       inputsMap.timestampTo.value = "2023-08-16T12:00";
       inputsMap.statusPrefixesOR.value = "200|403";
       inputsMap.mimesOR.value = "text/html|text/css";
       // Do the submit.
       const doPostSpy = spy(el, "doPost");
-      el.form.querySelector("button[type=submit]").click();
+      // Click the confirmation modal confirm button.
+      el.submitButton.shadowRoot
+        .querySelector("arch-modal")
+        .shadowRoot.querySelector("button.primary")
+        .click();
       // Check the payload.
       assert.isTrue(
-        doPostSpy.calledWith("UNION-UDQ", {
+        doPostSpy.calledWith({
+          sources: ["1", "2"],
           name: "ARCH Test Collection - HTML Only 3",
           surtPrefixesOR: ["org,archive", "org,archive-it"],
           timestampFrom: "20230815120000",
           timestampTo: "20230816120000",
-          statusPrefixesOR: ["200", "403"],
+          statusPrefixesOR: [200, 403],
           mimesOR: ["text/html", "text/css"],
-          input: ["SPECIAL-test-collection-1", "SPECIAL-test-collection-2"],
         })
       );
     });

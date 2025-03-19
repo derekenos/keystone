@@ -39,8 +39,8 @@ export class ArchSubCollectionBuilderSubmitButton extends LitElement {
   > = {
     mimesOR: identity<string>,
     name: identity<string>,
-    sources: identity<string>,
     statusPrefixesOR: identity<string>,
+    sources: identity<string>,
     surtPrefixesOR: identity<string>,
     timestampFrom: (s) => `on or after ${isoStringToDateString(s)}`,
     timestampTo: (s) => `on or before ${isoStringToDateString(s)}`,

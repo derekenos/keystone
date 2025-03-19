@@ -1,2 +1,0 @@
-function e(e,t=3){for(const n of["","Ki","Mi","Gi","Ti","Pi"]){if(e<1024)return`${e.toFixed(t)} ${n}B`;e/=1024}return""}function t(e){e.includes("_")&&(e=e.replaceAll("_"," "));return e.split(" ").map((e=>e[0].toUpperCase()+e.slice(1,e.length))).join(" ")}function n(e,t=!1){const n={month:"short",day:"numeric",year:"numeric"};return t?new Date(e).toLocaleTimeString(navigator.language,{...n,hour:"numeric",minute:"2-digit",timeZoneName:"short"}):new Date(e).toLocaleDateString(navigator.language,n)}export{e as h,n as i,t};
-//# sourceMappingURL=chunk-helpers2.js.map

@@ -1,8 +1,6 @@
 import { JSONSchemaType } from "ajv";
 import { SomeJSONSchema } from "ajv/lib/types/json-schema";
 
-export { SomeJSONSchema };
-
 import { ArchJobCard } from "../archGenerateDatasetForm/src/arch-job-card";
 
 export type ValueOf<T> = T[keyof T];

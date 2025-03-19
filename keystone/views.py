@@ -21,7 +21,7 @@ from config import settings
 from .arch_api import ArchAPI
 from .context_processors import helpers as ctx_helpers
 from .forms import CSVUploadForm
-from .helpers import get_in, identity, parse_csv, parse_solr_facet_data
+from .helpers import identity, parse_csv, parse_solr_facet_data
 from .models import (
     Collection,
     CollectionTypes,
@@ -29,6 +29,11 @@ from .models import (
     JobFile,
     User,
     UserRoles,
+)
+from .plugins import get_plugin_apps
+from .schemas import (
+    MULTI_INPUT_SPEC_TYPE,
+    FilesInputSpec,
 )
 from .solr import SolrClient
 
@@ -220,7 +225,7 @@ def get_custom_collection_configuration_info(collection):
     try:
         input_collections = (
             [Collection.get_for_input_spec(x) for x in input_spec["specs"]]
-            if input_spec["type"] == "multi-specs"
+            if input_spec["type"] == MULTI_INPUT_SPEC_TYPE
             else [Collection.get_for_input_spec(input_spec)]
         )
     except Collection.DoesNotExist:
@@ -249,14 +254,20 @@ def get_custom_collection_configuration_info(collection):
 def get_special_collection_configuration_info(collection):
     """Return a configuration info dict comprising the special collections's
     configuration parameters, or None if no such configuration exists."""
-    mimetype_d = get_in(("input_spec", "dataMime"), collection.metadata)
-    if not mimetype_d:
-        return None
-    return {
-        "param_label_value_pairs": [
-            ["MIME Type(s)", list(mimetype_d.values())],
-        ]
-    }
+    # First check whether any plugin-provided custom input spec class that validates
+    # against any defined collection.metadata.input_spec defines a
+    # get_collection_configuration_pairs() method that returns anything.
+    for app in get_plugin_apps():
+        for input_spec_cls in getattr(app, "custom_input_spec_classes", ()):
+            if not hasattr(input_spec_cls, "get_collection_configuration_pairs"):
+                continue
+            pairs = input_spec_cls.get_collection_configuration_pairs(collection)
+            if pairs is not None:
+                return {"param_label_value_pairs": pairs}
+    # No plugin-provided pairs found, so fall back to the default
+    # FilesInputSpec.get_collection_configuration_pairs().
+    pairs = FilesInputSpec.get_collection_configuration_pairs(collection)
+    return None if not pairs else {"param_label_value_pairs": pairs}
 
 
 @login_required

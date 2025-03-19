@@ -43,7 +43,7 @@ def validate_and_clean_collection_metadata(metadata, collection=None):
     Collection.save() but not during form field validation, validate only against
     the single collection_type-specific schema."""
     # pylint: disable=cyclic-import
-    from .api import (
+    from .schemas import (
         AITCollectionMetadata,
         CustomCollectionMetadata,
         SpecialCollectionMetadata,

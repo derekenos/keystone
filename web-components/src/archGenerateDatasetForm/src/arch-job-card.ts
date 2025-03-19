@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 
+import { SomeJSONSchema } from "ajv/lib/types/json-schema";
 import { customElement, property, query, state } from "lit/decorators.js";
 
 import {
@@ -7,7 +8,6 @@ import {
   JobIdStatesMap,
   JobParameters,
   ProcessingState,
-  SomeJSONSchema,
 } from "../../lib/types";
 
 import { Paths, isoStringToDateString } from "../../lib/helpers";

@@ -3,7 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 
 import ArchAPI from "../../lib/ArchAPI";
 import { Collection } from "../../lib/types";
-import { Paths, humanBytes } from "../../lib/helpers";
+import { Paths, formatCollectionSize } from "../../lib/helpers";
 
 import "../../archCard/index";
 import "../../archLoadingIndicator/index";
@@ -67,7 +67,7 @@ export class ArchCollectionsCard extends LitElement {
                     ${collection.name}
                   </a>
                 </td>
-                <td class="size">${humanBytes(collection.size_bytes, 1)}</td>
+                <td class="size">${formatCollectionSize(collection)}</td>
                 <td class="num-datasets">
                   ${collection.dataset_count} Datasets
                 </td>
@@ -122,6 +122,7 @@ export class ArchCollectionsCard extends LitElement {
     const response = await ArchAPI.collections.get([
       // TODO
       //      ["sort", "=", "-lastJobTime"],
+      ["sort", "=", "-id"],
       ["limit", "=", ArchCollectionsCard.maxDisplayedCollections],
     ]);
     this.numTotalCollections = response.count;

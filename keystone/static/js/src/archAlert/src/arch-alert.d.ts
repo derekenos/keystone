@@ -1,4 +1,4 @@
-import { LitElement } from "lit";
+import { LitElement, TemplateResult } from "lit";
 export declare enum AlertClass {
     Danger = "danger",
     Dark = "dark",
@@ -12,9 +12,9 @@ export declare enum AlertClass {
 export declare class ArchAlert extends LitElement {
     alertClass: AlertClass;
     hidden: boolean;
-    message: string;
+    message: string | TemplateResult;
     static styles: import("lit").CSSResult[];
-    render(): import("lit-html").TemplateResult<1>;
+    render(): TemplateResult<1>;
     hide(): void;
     show(): void;
 }

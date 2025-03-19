@@ -52,6 +52,18 @@ export const global = css`
     font-family: "Open Sans", Helvetica, Arial, sans-serif;
   }
 
+  /* https://www.w3.org/WAI/tutorials/forms/labels */
+  .visuallyhidden {
+    border: 0;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+  }
+
   a:any-link {
     color: ${linkColor};
     text-decoration: none;

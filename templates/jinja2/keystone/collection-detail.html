@@ -38,10 +38,14 @@
             </div>
             {% endif %}
 
+            {% if collection.size_bytes > 0 or collection.collection_type != "SPECIAL" %}
             <div>
-              <h3>{{ collection.size_bytes | filesizeformat(binary=True) }}</h3>
+              <h3>
+                {{ collection.size_bytes | filesizeformat(binary=True) }}
+              </h3>
               <p><i class="fa fa-database fa-4x" aria-hidden="true"></i></p>
             </div>
+            {% endif %}
 
             {% if collection.collection_type == CollectionTypes.AIT %}
             {% include 'keystone/collection-detail-ait-extra-icons.html' %}
@@ -90,7 +94,7 @@
           <dt>{{ label }}</dt>
           {% if isinstance(value, list) %}
           <dd>
-            {% set value_str = ("<em>" + "</em> or <em>".join(value) + "</em>") %}
+            {% set value_str = ("<em>" + "</em> or <em>".join(value|map("string")) + "</em>") %}
             {% if len(value_str) > 100 %}
             <details>
               <summary class="unselectable">

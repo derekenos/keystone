@@ -1,6 +1,5 @@
 import { JSONSchemaType } from "ajv";
 import { SomeJSONSchema } from "ajv/lib/types/json-schema";
-export { SomeJSONSchema };
 import { ArchJobCard } from "../archGenerateDatasetForm/src/arch-job-card";
 export type ValueOf<T> = T[keyof T];
 export type Modify<T, R> = Omit<T, keyof R> & R;
@@ -230,3 +229,4 @@ export type RunJobRequest = {
     job_type_id: JobId;
     params: JobParameters;
 };
+export {};

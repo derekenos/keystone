@@ -74,7 +74,8 @@ export class ArchGenerateDatasetForm extends LitElement {
   @state() collectionIdNameMap: Map<Collection["id"], Collection["name"]> =
     new Map();
   @state() availableJobs: AvailableJobs = [];
-  @state() sourceCollectionId: Collection["id"] | null = null;
+  @state() sourceCollectionId: Collection["id"] | null =
+    ArchGenerateDatasetForm.getUrlCollectionId();
   @state() collectionJobIdStatesMapMap: Record<
     Collection["id"],
     JobIdStatesMap
@@ -89,10 +90,23 @@ export class ArchGenerateDatasetForm extends LitElement {
   // Apply any ARCH-specific styles.
   static styles = Styles;
 
+  private static getUrlCollectionId() {
+    const collectionIdStr = new URLSearchParams(window.location.search).get(
+      UrlCollectionParamName
+    );
+    return collectionIdStr ? parseInt(collectionIdStr) : null;
+  }
+
   async connectedCallback() {
+    const { sourceCollectionId } = this;
+
     // Fetch available Collections and Jobs.
-    await this.initAvailableJobs();
     void this.initCollections();
+    if (sourceCollectionId) {
+      await this.setSourceCollectionId(sourceCollectionId);
+    } else {
+      void this.initAvailableJobs();
+    }
     super.connectedCallback();
     this.addEventListener(
       "generate-dataset",
@@ -128,37 +142,41 @@ export class ArchGenerateDatasetForm extends LitElement {
 
       <label for="job-category">Select Dataset Category</label>
       <sp-theme color="light" scale="medium">
-        <sp-tabs selected="${this.availableJobs[0].categoryId}" size="l">
-          ${this.availableJobs.map(
-            (jobsCat) => html`<sp-tab
-              label="${jobsCat.categoryName}"
-              value="${jobsCat.categoryId}"
-              style="--mod-tabs-icon-to-text: 0;"
-            >
-              <sp-icon
-                label="${jobsCat.categoryName}"
-                src="${jobsCat.categoryImage}"
-                slot="icon"
-                size="l"
-              ></sp-icon>
-            </sp-tab> `
-          )}
-          ${this.availableJobs.map(
-            (jobsCat) => html`
-              <sp-tab-panel value="${jobsCat.categoryId}">
-                <arch-job-category-section
-                  .collectionId=${this.sourceCollectionId}
-                  .collectionName=${this.collectionIdNameMap.get(
-                    this.sourceCollectionId ?? 0
-                  )}
-                  .jobsCat=${jobsCat}
-                  .jobIdStatesMap=${jobIdStatesMap}
-                >
-                </arch-job-category-section>
-              </sp-tab-panel>
-            `
-          )}
-        </sp-tabs>
+        ${this.availableJobs.length === 0
+          ? html``
+          : html`
+              <sp-tabs selected="${this.availableJobs[0].categoryId}" size="l">
+                ${this.availableJobs.map(
+                  (jobsCat) => html`<sp-tab
+                    label="${jobsCat.categoryName}"
+                    value="${jobsCat.categoryId}"
+                    style="--mod-tabs-icon-to-text: 0;"
+                  >
+                    <sp-icon
+                      label="${jobsCat.categoryName}"
+                      src="${jobsCat.categoryImage}"
+                      slot="icon"
+                      size="l"
+                    ></sp-icon>
+                  </sp-tab> `
+                )}
+                ${this.availableJobs.map(
+                  (jobsCat) => html`
+                    <sp-tab-panel value="${jobsCat.categoryId}">
+                      <arch-job-category-section
+                        .collectionId=${this.sourceCollectionId}
+                        .collectionName=${this.collectionIdNameMap.get(
+                          this.sourceCollectionId ?? 0
+                        )}
+                        .jobsCat=${jobsCat}
+                        .jobIdStatesMap=${jobIdStatesMap}
+                      >
+                      </arch-job-category-section>
+                    </sp-tab-panel>
+                  `
+                )}
+              </sp-tabs>
+            `}
       </sp-theme>
     `;
   }
@@ -201,15 +219,9 @@ export class ArchGenerateDatasetForm extends LitElement {
     this.collectionIdNameMap = new Map(
       this.collections.map((c) => [c.id, c.name])
     );
-    // Maybe select an initial Collection.
-    const initialCollectionId = parseInt(
-      new URLSearchParams(window.location.search).get(UrlCollectionParamName) ??
-        ""
-    );
-    if (!Number.isNaN(initialCollectionId)) {
-      await this.setSourceCollectionId(initialCollectionId);
-      this.requestUpdate();
-    }
+    // Request an update to ensure that any set this.sourceCollectionId
+    // is reflected in the collection select table.
+    this.requestUpdate();
   }
 
   private async initAvailableJobs() {
