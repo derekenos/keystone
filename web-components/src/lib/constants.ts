@@ -1,7 +1,5 @@
 import { CollectionType, ProcessingState } from "./types";
 
-export const HtmlStatusCodeRegex = /^[1-5]\d\d$/;
-
 // SURTs can either be either a prefix:
 //   com,example            (would match example*.com and all related subdomains)
 //   com,example,           (would match example.com and all subdomains)
