@@ -67,6 +67,7 @@ from .helpers import (
     dot_to_dunder,
     find_field_from_lookup,
     report_exceptions,
+    report_warning,
 )
 from .models import (
     Collection,
@@ -377,13 +378,11 @@ def register_job_start(request, payload: JobStartIn):
 
     parameters = payload.parameters
 
-    # If this is a retry, as indicated by attempt > 1, update the existing attempt
-    # count and return.
-    current_attempt = parameters.attempt
-    if current_attempt > 1:
-        # In the event of a retry, update the existing JobStart's attempt count.
-        job_start = JobStart.objects.get(id=payload.id)
-        # Raise an error if the current attempt would not decrement the existing.
+    # If a matching JobStart exists, update the attempt count if the current request value
+    # is greater than the existing JobStart value, otherwise return a 400.
+    job_start = JobStart.objects.filter(id=payload.id).first()
+    if job_start:
+        current_attempt = parameters.attempt
         previous_attempt = job_start.parameters["attempt"]
         if current_attempt <= previous_attempt:
             raise HttpError(
@@ -396,7 +395,7 @@ def register_job_start(request, payload: JobStartIn):
         return job_start
 
     #
-    # This is the first job run attempt.
+    # This is the first job run attempt (that we know of)
     #
 
     # If job is not a User-Defined Query, lookup the collection from the
@@ -476,19 +475,44 @@ def register_job_complete(request, payload: JobCompleteIn):
     job_start = get_object_or_404(JobStart, id=payload.job_start_id)
     attempt_number = job_start.parameters["attempt"]
 
-    # Get (in the event of a retry) or create a JobComplete.
-    if attempt_number > 1:
-        job_complete = JobComplete.objects.get(job_start=job_start)
-        # Maybe update output_bytes.
-        if job_complete.output_bytes != payload.output_bytes:
-            job_complete.output_bytes = payload.output_bytes
-            job_complete.save()
-    else:
-        job_complete = JobComplete.objects.create(
+    # If no terminal event state was previously registered, create one from the
+    # payload event_type value.
+    job_status = job_start.get_job_status()
+    if job_status.finished_time is None:
+        terminal_job_event = JobEvent.objects.create(
             job_start=job_start,
-            output_bytes=payload.output_bytes,
+            event_type=payload.event_type,
             created_at=payload.created_at,
         )
+        report_warning(
+            "Created missing terminal JobEvent",
+            context={
+                "request_payload": payload.dict(),
+                "job_event": terminal_job_event,
+            },
+        )
+
+    # Report a warning if this is a retry and no JobComplete was created after a
+    # prior attempt. Ideally all failed, cancelled, etc. jobs would be reported as complete,
+    # but let's be flexible and simply report a warning and create the missing JobComplete as
+    # necessary.
+    if (
+        attempt_number > 1
+        and not JobComplete.objects.filter(job_start=job_start).exists()
+    ):
+        report_warning(
+            "JobComplete was missing for JobStart with attempt > 1",
+            context={"request_payload": payload.dict(), "job_state": job_status.state},
+        )
+
+    # Create or update the JobComplete.
+    job_complete, _ = JobComplete.objects.update_or_create(
+        job_start=job_start,
+        defaults={
+            "output_bytes": payload.output_bytes,
+            "created_at": payload.created_at,
+        },
+    )
 
     job_type = job_complete.job_start.job_type
     job_state = job_start.get_job_status().state

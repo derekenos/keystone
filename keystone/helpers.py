@@ -102,3 +102,8 @@ def report_exceptions(*exceptions):
         return wrapper
 
     return decorator
+
+
+def report_warning(message, context=None):
+    """Report a warning to Sentry."""
+    sentry_sdk.capture_message(message, level="warning", extras=context)
