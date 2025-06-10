@@ -1,0 +1,143 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls %}
+
+{% block submit_buttons_bottom %}
+{{ block.super }}
+
+<h2 style="background-color: #eee; padding: 1rem 0.5rem; margin: 1rem 0;">
+  Related Debug Info
+</h2>
+
+<fieldset class="module aligned" style="margin-top: -1rem;">
+  <div class="form-row">
+    <div>
+
+      <div class="flex-container">
+        <label>JobStart JobType:</label>
+        <p>
+          {{ jobstart.job_type.name }}
+        </p>
+      </div>
+
+      <div class="flex-container">
+        <label>JobStart User:</label>
+        <p>
+          <a href="{% url 'admin:keystone_user_change' jobstart.user.id %}">
+            {{ jobstart.user.username }}
+          </a>
+        </p>
+      </div>
+
+      <div class="flex-container">
+        <label>JobStart Collection:</label>
+        <p>
+          <a href="{% url 'admin:keystone_collection_change' jobstart.collection.id %}">
+            {{ jobstart.collection.name }}
+          </a>
+        </p>
+      </div>
+
+      <div class="flex-container">
+        <label>JobStart Parameters:</label>
+        <pre>
+{{ jobstart_parameters_json }}
+        </pre>
+      </div>
+
+      <div class="flex-container">
+        <label>JobComplete:</label>
+        {% if jobcomplete %}
+        <table class="related-widget-wrapper">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Output Bytes</th>
+              <th>Created At</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <a href="{% url "admin:keystone_jobcomplete_change" object_id=jobcomplete.id %}">
+                  {{ jobcomplete.id }}
+                </a>
+              </td>
+              <td>{{ jobcomplete.output_bytes }}</td>
+              <td>{{ jobcomplete.created_at }}</td>
+            </tr>
+          </tbody>
+        </table>
+        {% else %}
+        <p>
+          <strong>does not exist</strong>
+        </p>
+        {% endif %}
+      </div>
+
+      <br>
+      <div class="flex-container">
+        <label>JobFiles:</label>
+        <table class="related-widget-wrapper">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Filename</th>
+              <th>Size Bytes</th>
+              <th>MIME Type</th>
+              <th>File Type</th>
+              <th>Line Count</th>
+              <th>Creation Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for jobfile in jobfiles %}
+            <tr>
+              <td>
+                <a href="{% url "admin:keystone_jobfile_change" object_id=jobfile.id %}">
+                  {{ jobfile.id }}
+                </a>
+              </td>
+              <td>{{ jobfile.filename }}</td>
+              <td>{{ jobfile.size_bytes }}</td>
+              <td>{{ jobfile.mime_type }}</td>
+              <td>{{ jobfile.file_type }}</td>
+              <td>{{ jobfile.line_count }}</td>
+              <td>{{ jobfile.creation_time }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <br>
+      <div class="flex-container">
+        <label>JobEvents:</label>
+        <table class="related-widget-wrapper">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Event Type</th>
+              <th>Created At</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for jobevent in jobevents %}
+            <tr>
+              <td>
+                <a href="{% url "admin:keystone_jobevent_change" object_id=jobevent.id %}">
+                  {{ jobevent.id }}
+                </a>
+              </td>
+              <td>{{ jobevent.event_type }}</td>
+              <td>{{ jobevent.created_at }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</fieldset>
+
+{% endblock %}

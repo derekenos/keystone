@@ -372,13 +372,15 @@ class DatasetAdmin(KeystoneModelAdmin):
     filter_select_multiple_m2ms = ("teams",)
 
     list_display = (
-        "job_start",
+        "id",
         "user",
         "job_type",
         "state",
         "start_time",
         "finished_time",
     )
+
+    readonly_fields = ("job_start",)
 
     def user(self, dataset):
         """Return the associated User.username"""
@@ -387,6 +389,28 @@ class DatasetAdmin(KeystoneModelAdmin):
     def job_type(self, dataset):
         """Return the associated JobType.name"""
         return dataset.job_start.job_type.name
+
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        jobstart = models.JobStart.objects.get(dataset__id=object_id)
+        return super().change_view(
+            request,
+            object_id,
+            form_url,
+            extra_context=(extra_context or {})
+            | {
+                "jobstart": jobstart,
+                "jobstart_parameters_json": json.dumps(jobstart.parameters, indent=2),
+                "jobevents": models.JobEvent.objects.filter(
+                    job_start__dataset__id=object_id
+                ).order_by("created_at"),
+                "jobcomplete": models.JobComplete.objects.filter(
+                    job_start__dataset__id=object_id
+                ).first(),
+                "jobfiles": models.JobFile.objects.filter(
+                    job_complete__job_start__dataset__id=object_id
+                ).order_by("creation_time"),
+            },
+        )
 
 
 @admin.register(models.ArchQuota)
@@ -479,6 +503,8 @@ class JobCompleteAdmin(admin.ModelAdmin):
         "created_at",
     )
 
+    readonly_fields = tuple(f.name for f in models.JobComplete._meta.fields)
+
 
 @admin.register(models.JobFile)
 class JobFileAdmin(admin.ModelAdmin):
@@ -494,6 +520,8 @@ class JobFileAdmin(admin.ModelAdmin):
         "creation_time",
     )
 
+    readonly_fields = tuple(f.name for f in models.JobFile._meta.fields)
+
 
 @admin.register(models.JobEvent)
 class JobEventAdmin(admin.ModelAdmin):
@@ -505,3 +533,5 @@ class JobEventAdmin(admin.ModelAdmin):
         "event_type",
         "created_at",
     )
+
+    readonly_fields = tuple(f.name for f in models.JobEvent._meta.fields)
