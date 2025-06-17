@@ -15,3 +15,14 @@ export declare function isActiveProcessingState(state: ProcessingState): boolean
 export declare function timestampStringToYearMonthString(timestamp: string): string;
 export declare function readableFacetName(facetName: string, facetField: string): string;
 export declare function isValidCustomInputCollection(collection: Collection): boolean;
+export declare function formatCollectionSize(collection: Collection): HTMLElement | string;
+type SurtCheck = {
+    isValid: boolean;
+    isPrefix: boolean;
+    match: null | RegExpExecArray;
+};
+export declare function checkSurt(s: string): SurtCheck;
+export declare function urlToSurt(urlStr: string): string;
+export declare function assertIsValidWildcardPatternUrl(url: URL): boolean;
+export declare function urlToExpandedSurts(urlStr: string): Array<string>;
+export declare function surtToUrl(s: string): string | null;

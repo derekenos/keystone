@@ -15,3 +15,5 @@ export type DecodedFormData = Record<
   FormFieldName,
   string | Array<string> | Error
 >;
+
+export type PreSendValue = string | Array<string> | Error | Array<number>;

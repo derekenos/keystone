@@ -1,5 +1,6 @@
 import { LitElement } from "lit";
-import { AvailableJob, JobIdStatesMap, JobParameters, SomeJSONSchema } from "../../lib/types";
+import { SomeJSONSchema } from "ajv/lib/types/json-schema";
+import { AvailableJob, JobIdStatesMap, JobParameters } from "../../lib/types";
 import { ArchJobButton } from "./arch-job-button";
 import "./arch-job-button";
 export declare class ArchJobCard extends LitElement {

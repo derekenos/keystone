@@ -2,10 +2,21 @@ import { CollectionType, ProcessingState } from "./types";
 
 export const HtmlStatusCodeRegex = /^[1-5]\d\d$/;
 
-// SurtRegex: domain labels separated by commas optionally followed by ")" or ")/.*"
+// SURTs can either be either a prefix:
+//   com,example            (would match example*.com and all related subdomains)
+//   com,example,           (would match example.com and all subdomains)
+// or fully qualified:
+//   com,example,)/         (would match example.com/* and NO subdomains)
+//   com,example,)/products (would match example.com/products* and NO subdomains)
 const ValidLabelChars = "[a-zA-Z0-9\\-]";
-export const SurtPrefixRegex = new RegExp(
-  `^${ValidLabelChars}+,${ValidLabelChars}+(${ValidLabelChars}+,?)*((\\))|(\\)/.*))?$`
+const SurtDomain = `(?<domain>(${ValidLabelChars}+,)+(${ValidLabelChars}+))`;
+export const SurtPrefixRegex = new RegExp(`^${SurtDomain},?$`);
+const SurtPort = "(:(?<port>\\d+))?";
+const SurtUserinfo = "(@(?<userinfo>[^\\)]+))?";
+export const SurtFullRegex = new RegExp(
+  ["^", SurtDomain, SurtPort, SurtUserinfo, "(\\)(?<pathname>/.*)?)", "$"].join(
+    ""
+  )
 );
 
 export const BoolDisplayMap: Record<string, string> = {

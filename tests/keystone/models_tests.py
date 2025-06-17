@@ -43,7 +43,10 @@ class TestCollection:
     def test_ait_collection_input_spec(self, make_collection):
         """An AIT-type collection uses a legacy collection-type input spec."""
         c = make_collection(collection_type=CollectionTypes.AIT)
-        assert c.input_spec == {"type": "collection", "collectionId": c.arch_id}
+        assert c.input_spec.dict() == {
+            "type": "collection",
+            "collectionId": c.arch_id,
+        }
 
     @mark.django_db
     def test_legacy_custom_collection_input_spec(self, make_collection):
@@ -53,7 +56,10 @@ class TestCollection:
             collection_type=CollectionTypes.CUSTOM,
             arch_id="CUSTOM-ks:test:ARCHIVEIT-18017_1710966891017",
         )
-        assert c.input_spec == {"type": "collection", "collectionId": c.arch_id}
+        assert c.input_spec.dict() == {
+            "type": "collection",
+            "collectionId": c.arch_id,
+        }
 
     @mark.django_db
     def test_cdx_dataset_custom_collection_input_spec(self, make_collection):
@@ -63,7 +69,7 @@ class TestCollection:
             collection_type=CollectionTypes.CUSTOM,
             arch_id="CUSTOM-018fa5ec-523e-7a2d-bda5-d87b0d5c46b2",
         )
-        assert c.input_spec == {
+        assert c.input_spec.dict() == {
             "type": "dataset",
             "inputType": "cdx",
             "uuid": "018fa5ec-523e-7a2d-bda5-d87b0d5c46b2",
@@ -74,7 +80,10 @@ class TestCollection:
         """A SPECIAL-type collection that does not define a custom metadata.input_spec
         uses a legacy collection-type input spec."""
         c = make_collection(collection_type=CollectionTypes.SPECIAL)
-        assert c.input_spec == {"type": "collection", "collectionId": c.arch_id}
+        assert c.input_spec.dict() == {
+            "type": "collection",
+            "collectionId": c.arch_id,
+        }
 
     @mark.django_db
     def test_extra_special_collection_input_spec(
@@ -86,7 +95,7 @@ class TestCollection:
             collection_type=CollectionTypes.SPECIAL,
             metadata={"input_spec": FILES_INPUT_SPEC},
         )
-        assert c.input_spec == FILES_INPUT_SPEC
+        assert c.input_spec.dict() == FILES_INPUT_SPEC
 
     @mark.django_db
     def test_extra_special_collection_input_spec_validation(
@@ -99,7 +108,12 @@ class TestCollection:
                 metadata={"input_spec": FILES_INPUT_SPEC | {"type": "filez"}},
             )
         exc_msg = exc_info.value.args[0]
-        assert exc_msg.startswith("1 validation error") and "given=filez" in exc_msg
+        # Expect >=1 validations errors:
+        #   1 for the invalid ArchFileInputSpec "type" value
+        #   N for the invalid/unspecified plugin-supported *InputSpec field values
+        num_errors, rest = exc_msg.split(" ", 1)
+        assert int(num_errors) >= 1
+        assert rest.startswith("validation errors") and "given=filez" in rest
 
 
 class TestArchQuota:

@@ -19,6 +19,7 @@ export declare class ArchGenerateDatasetForm extends LitElement {
     collectionSelector: HTMLSelectElement;
     categorySections: Array<ArchJobCategorySection>;
     static styles: import("lit").CSSResult[];
+    private static getUrlCollectionId;
     connectedCallback(): Promise<void>;
     render(): import("lit-html").TemplateResult<1>;
     private setCollectionIdUrlParam;

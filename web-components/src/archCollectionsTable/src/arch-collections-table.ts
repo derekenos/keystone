@@ -15,7 +15,7 @@ import { Topics } from "../../lib/pubsub";
 import {
   Paths,
   createElement,
-  humanBytes,
+  formatCollectionSize,
   isActiveProcessingState,
   isValidCustomInputCollection,
   isoStringToDateString,
@@ -120,7 +120,7 @@ export class ArchCollectionsTable extends ArchDataTable<Collection> {
         (collection.metadata as CustomCollectionMetadata).state !==
           ProcessingState.FINISHED
           ? ""
-          : humanBytes(collection.size_bytes, 1),
+          : formatCollectionSize(collection),
     ];
 
     this.columns = [

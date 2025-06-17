@@ -1,4 +1,4 @@
-import{i as t,_ as o,s as e,y as s,a as l}from"./chunk-lit-element.js";import{t as a}from"./chunk-state.js";import{A as i}from"./chunk-ArchAPI.js";import{a as c}from"./chunk-helpers.js";import"./chunk-arch-card.js";import"./arch-loading-indicator.js";import{g as n,c as r}from"./chunk-styles.js";import{h as d}from"./chunk-helpers2.js";import"./chunk-scale-large.js";import"./chunk-sp-overlay.js";var h,m=[n,r,t`
+import{i as t,_ as o,s as e,y as s,a as l}from"./chunk-lit-element.js";import{t as a}from"./chunk-state.js";import{A as i}from"./chunk-ArchAPI.js";import{a as c,g as n}from"./chunk-helpers.js";import"./chunk-arch-card.js";import"./arch-loading-indicator.js";import{g as r,c as d}from"./chunk-styles.js";import"./chunk-scale-large.js";import"./chunk-sp-overlay.js";var h,m=[r,d,t`
     thead > tr.hidden-header {
       color: transparent;
     }
@@ -63,7 +63,7 @@ import{i as t,_ as o,s as e,y as s,a as l}from"./chunk-lit-element.js";import{t 
                     ${t.name}
                   </a>
                 </td>
-                <td class="size">${d(t.size_bytes,1)}</td>
+                <td class="size">${n(t)}</td>
                 <td class="num-datasets">
                   ${t.dataset_count} Datasets
                 </td>
@@ -95,5 +95,5 @@ import{i as t,_ as o,s as e,y as s,a as l}from"./chunk-lit-element.js";import{t 
               `}
         </div>
       </arch-card>
-    `}async initCollections(){const t=await i.collections.get([["limit","=",h.maxDisplayedCollections]]);this.numTotalCollections=t.count,this.collections=t.items}};u.maxDisplayedCollections=10,u.styles=m,o([a()],u.prototype,"numTotalCollections",void 0),o([a()],u.prototype,"collections",void 0),u=h=o([l("arch-collections-card")],u);export{u as ArchCollectionsCard};
+    `}async initCollections(){const t=await i.collections.get([["sort","=","-id"],["limit","=",h.maxDisplayedCollections]]);this.numTotalCollections=t.count,this.collections=t.items}};u.maxDisplayedCollections=10,u.styles=m,o([a()],u.prototype,"numTotalCollections",void 0),o([a()],u.prototype,"collections",void 0),u=h=o([l("arch-collections-card")],u);export{u as ArchCollectionsCard};
 //# sourceMappingURL=arch-collections-card.js.map

@@ -1,6 +1,5 @@
-import { LitElement, html } from "lit";
+import { LitElement, TemplateResult, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { unsafeHTML } from "lit/directives/unsafe-html.js";
 
 import styles from "./styles";
 
@@ -19,7 +18,7 @@ export enum AlertClass {
 export class ArchAlert extends LitElement {
   @property({ type: String }) alertClass: AlertClass = AlertClass.Primary;
   @property({ type: Boolean }) hidden = false;
-  @property({ type: String }) message = "";
+  @property({ type: String }) message: string | TemplateResult = html``;
 
   static styles = styles;
 
@@ -30,7 +29,7 @@ export class ArchAlert extends LitElement {
         style="display: ${this.hidden ? "none" : "flex"}"
         role="alert"
       >
-        <p>${unsafeHTML(this.message)}</p>
+        <p>${this.message}</p>
         <button
           type="button"
           class="close"

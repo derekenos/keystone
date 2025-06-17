@@ -2,3 +2,4 @@ export type FormFieldName = "sources" | "name" | "surtPrefixesOR" | "timestampFr
 export type FormFieldValue = string | Array<string>;
 export type ParsedFormFieldValue = string | Array<string>;
 export type DecodedFormData = Record<FormFieldName, string | Array<string> | Error>;
+export type PreSendValue = string | Array<string> | Error | Array<number>;
