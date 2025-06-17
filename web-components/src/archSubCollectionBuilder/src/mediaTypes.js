@@ -1,5 +1,5 @@
 export default {
-  "application": [
+  application: [
     "A2L",
     "ATF",
     "ATFX",
@@ -915,9 +915,9 @@ export default {
     "yang",
     "yin+xml",
     "zip",
-    "zstd"
+    "zstd",
   ],
-  "audio": [
+  audio: [
     "32kadpcm",
     "3gpp2",
     "AMR",
@@ -983,9 +983,9 @@ export default {
     "x-realaudio",
     "x-scpls",
     "x-sd2",
-    "xm"
+    "xm",
   ],
-  "chemical": [
+  chemical: [
     "x-alchemy",
     "x-cache",
     "x-cache-csf",
@@ -1037,16 +1037,10 @@ export default {
     "x-vamas-iso14976",
     "x-vmd",
     "x-xtel",
-    "x-xyz"
+    "x-xyz",
   ],
-  "font": [
-    "collection",
-    "otf",
-    "ttf",
-    "woff",
-    "woff2"
-  ],
-  "image": [
+  font: ["collection", "otf", "ttf", "woff", "woff2"],
+  image: [
     "aces",
     "apng",
     "avci",
@@ -1144,18 +1138,18 @@ export default {
     "x-xbitmap",
     "x-xcf",
     "x-xpixmap",
-    "x-xwindowdump"
+    "x-xwindowdump",
   ],
-  "message": [
+  message: [
     "disposition-notification",
     "global",
     "global-delivery-status",
     "global-disposition-notification",
     "global-headers",
     "rfc822",
-    "vnd.wfa.wsc"
+    "vnd.wfa.wsc",
   ],
-  "model": [
+  model: [
     "3mf",
     "gltf+json",
     "gltf-binary",
@@ -1191,13 +1185,10 @@ export default {
     "x3d+binary",
     "x3d+fastinfoset",
     "x3d+xml",
-    "x3d-vrml"
+    "x3d-vrml",
   ],
-  "multipart": [
-    "vnd.bint.med-plus",
-    "voice-message"
-  ],
-  "text": [
+  multipart: ["vnd.bint.med-plus", "voice-message"],
+  text: [
     "cache-manifest",
     "calendar",
     "coffeescript",
@@ -1306,9 +1297,9 @@ export default {
     "x-tex",
     "x-uuencode",
     "x-vcalendar",
-    "yaml"
+    "yaml",
   ],
-  "video": [
+  video: [
     "3gpp",
     "3gpp2",
     "annodex",
@@ -1361,9 +1352,7 @@ export default {
     "x-ms-wvx",
     "x-msvideo",
     "x-sgi-movie",
-    "x-smv"
+    "x-smv",
   ],
-  "x-conference": [
-    "x-cooltalk"
-  ]
+  "x-conference": ["x-cooltalk"],
 };
