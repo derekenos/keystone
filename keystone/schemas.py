@@ -36,6 +36,16 @@ from .models import (
 
 
 ###############################################################################
+# Constants
+###############################################################################
+
+
+TERMINAL_JOB_EVENT_TYPES = tuple(
+    x for x, _ in JobEventTypes.choices if JobEventTypes.is_terminal(x)
+)
+
+
+###############################################################################
 # Shared Schemas
 ###############################################################################
 
@@ -161,6 +171,7 @@ class JobCompleteIn(Schema):
     """Request POST payload schema for JobComplete registration"""
 
     job_start_id: str
+    event_type: Literal[TERMINAL_JOB_EVENT_TYPES]
     output_bytes: int
     created_at: str
     files: List[DatasetFileSchema]

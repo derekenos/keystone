@@ -1,11 +1,31 @@
+from datetime import (
+    datetime,
+    timedelta,
+    timezone,
+)
+
 from django.core.exceptions import ValidationError
 from django.db import OperationalError
 from model_bakery import baker
 from pytest import mark
 import pytest  # noqa
 
-from keystone.models import ArchQuota, Account, User, Team, Collection, CollectionTypes
+from keystone.models import (
+    Account,
+    ArchQuota,
+    Collection,
+    CollectionTypes,
+    JobEvent,
+    JobEventTypes,
+    JobStatus,
+    Team,
+    User,
+)
 from .test_helpers import read_json_file
+
+
+utc_now = lambda: datetime.now(tz=timezone.utc)
+one_min_later = lambda dt: dt + timedelta(minutes=1)
 
 
 class TestCollection:
@@ -191,3 +211,55 @@ class TestUser:
         with pytest.raises(OperationalError) as exc_info:
             user.save()
         assert exc_info.value.args[0].startswith("username is immutable")
+
+    @mark.django_db
+    def test_job_start_get_job_status(self, make_jobstart):
+        # JobStart.get_job_status() does its best to represent the current JobEvent state.
+        job_start_created_at = utc_now()
+        job_start = make_jobstart(created_at=job_start_created_at)
+        # Check that get_job_status() returns an empty JobStatus in the absence of any JobEvents.
+        assert job_start.get_job_status() == JobStatus(
+            state=None, start_time=None, finished_time=None
+        )
+
+        # Create a QUEUED event and recheck get_job_status().
+        queued_at = one_min_later(job_start_created_at)
+        queued_je = JobEvent.objects.create(
+            job_start=job_start, event_type=JobEventTypes.QUEUED, created_at=queued_at
+        )
+        assert job_start.get_job_status() == JobStatus(
+            state=JobEventTypes.QUEUED, start_time=queued_at, finished_time=None
+        )
+
+        # Check that if we now create a RUNNING event, get_job_status() will report that created_at
+        # timestamp as the start_time.
+        running_at = one_min_later(queued_at)
+        running_je = JobEvent.objects.create(
+            job_start=job_start, event_type=JobEventTypes.RUNNING, created_at=running_at
+        )
+        assert job_start.get_job_status() == JobStatus(
+            state=JobEventTypes.RUNNING, start_time=running_at, finished_time=None
+        )
+
+        # Check that if we create a FINISHED event, get_job_status() reports a non-None finished_time.
+        finished_at = one_min_later(running_at)
+        JobEvent.objects.create(
+            job_start=job_start,
+            event_type=JobEventTypes.FINISHED,
+            created_at=finished_at,
+        )
+        assert job_start.get_job_status() == JobStatus(
+            state=JobEventTypes.FINISHED,
+            start_time=running_at,
+            finished_time=finished_at,
+        )
+
+        # Check that in the absence of QUEUED or RUNNING JobEvents, get_job_status() will report
+        # the JobStart.created_at as the start_time.
+        queued_je.delete()
+        running_je.delete()
+        assert job_start.get_job_status() == JobStatus(
+            state=JobEventTypes.FINISHED,
+            start_time=job_start_created_at,
+            finished_time=finished_at,
+        )

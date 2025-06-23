@@ -78,7 +78,16 @@ def make_dataset():
 
 @fixture
 def make_jobstart():
-    return maker(models.JobStart)
+    return lambda **kwargs: maker(models.JobStart)(
+        **(
+            {
+                "job_type": models.JobType.objects.get(
+                    id=KnownArchJobUuids.DOMAIN_FREQUENCY
+                )
+            }
+            | kwargs
+        )
+    )
 
 
 @fixture
