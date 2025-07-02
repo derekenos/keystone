@@ -242,23 +242,18 @@ describe("ArchSubCollectionBuilder", () => {
 
     it("rejects invalid single values", async () => {
       const [el, inputEl] = await elInputPair("surtPrefixesOR");
-      for (const inputVal of [
-        "org",
-        "org,",
-        "org,arch_ive", // underscore is invalid label char
-        "org,archive/",
-        "org,archive)a",
-        "https://archive.org",
-        "https://archive.org/a/b?c=1",
-        "not even trying",
+      for (const [inputVal, errorMessage] of [
+        ["org", "Enter a valid SURT"],
+        ["org,", "Enter a valid SURT"],
+        ["org,arch_ive", "Enter a valid SURT"], // underscore is invalid label char
+        ["org,archive/", "Enter a valid SURT"],
+        ["org,archive)/*", "SURT can not contain wildcard (*) character"],
+        ["org,archive)a", "Enter a valid SURT"],
+        ["https://archive.org", "Enter a valid SURT"],
+        ["https://archive.org/a/b?c=1", "Enter a valid SURT"],
+        ["not even trying", "Enter a valid SURT"],
       ]) {
-        assertInputIsInvalid(
-          el,
-          inputEl,
-          inputVal,
-          undefined,
-          "Enter a valid SURT"
-        );
+        assertInputIsInvalid(el, inputEl, inputVal, undefined, errorMessage);
       }
     });
   });
