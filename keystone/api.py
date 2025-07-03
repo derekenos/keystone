@@ -18,6 +18,7 @@ import django.utils
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import ObjectDoesNotExist
+from django.forms import model_to_dict
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError, OperationalError, transaction
 from django.db.models import Count, Exists, OuterRef, Q, QuerySet, Subquery
@@ -526,7 +527,20 @@ def register_job_complete(request, payload: JobCompleteIn):
     if job_state != JobEventTypes.FINISHED:
         return HTTPStatus.NO_CONTENT, None
 
-    # Create the JobFile objects.
+    # Purge any existing associated JobFiles and notify Sentry of any deletions.
+    existing_jobfile_qs = JobFile.objects.filter(job_complete=job_complete)
+    existing_jobfiles = existing_jobfile_qs.all()
+    if existing_jobfiles:
+        existing_jobfile_qs.delete()
+        report_warning(
+            "Deleted preexisting JobFile(s) during JobComplete update",
+            context={
+                "request_payload": payload.dict(),
+                "job_files": [model_to_dict(jobfile) for jobfile in existing_jobfiles],
+            },
+        )
+
+    # Create the JobFiles.
     JobFile.objects.bulk_create(
         [
             JobFile(

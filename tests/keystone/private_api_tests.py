@@ -2,14 +2,17 @@ from http import HTTPStatus
 from unittest.mock import patch
 from datetime import (
     datetime,
+    timedelta,
     timezone,
 )
 
 from django.test import Client as _Client
+from django.forms import model_to_dict
 from model_bakery.baker import prepare
 from pytest import (
     fixture,
     mark,
+    raises,
 )
 
 from config.settings import (
@@ -22,6 +25,7 @@ from keystone.models import (
     JobComplete,
     JobEvent,
     JobEventTypes,
+    JobFile,
     JobStart,
 )
 
@@ -248,6 +252,73 @@ def test_register_job_event_and_complete(make_jobstart):
     job_files = job_complete.jobfile_set.all()
     assert len(job_files) == 1
     assert job_files[0].filename == "dummy-output.csv.gz"
+
+
+@mark.django_db
+@patch("keystone.api.report_warning")
+def test_register_job_complete_purges_jobfiles_on_update(report_warning, make_jobstart):
+    """Requests to /private/api/job/complete for which a corresponding JobComplete
+    already exists, should result in updates to the JobComplete.{output_bytes,created_at}
+    fields, the purging of all preexisting JobFiles, and the creation of new JobFiles.
+    """
+    client = Client()
+    # Create a JobStart, JobComplete, and check that all is as expected.
+    job_start = make_jobstart()
+    params = make_register_job_complete_params(job_start)
+    res = client.register_job_complete(**params)
+    job_complete = JobComplete.objects.get(job_start_id=job_start.id)
+    assert job_complete.output_bytes == params["output_bytes"]
+    assert job_complete.created_at.isoformat() == params["created_at"]
+    job_files = job_complete.jobfile_set.all()
+    assert len(job_files) == 1 and job_files[0].filename == "dummy-output.csv.gz"
+
+    # Create a second JobComplete w/ associated JobFile so that we can verify
+    # that the JobFile purge doesn't clobber those of other JobCompletes.
+    other_job_start = make_jobstart()
+    client.register_job_complete(**make_register_job_complete_params(other_job_start))
+    other_job_file = JobComplete.objects.get(
+        job_start_id=other_job_start.id
+    ).jobfile_set.first()
+
+    # Modify the original JobComplete request params.
+    params["output_bytes"] += 1
+    params["created_at"] = (
+        datetime.fromisoformat(params["created_at"]) + timedelta(minutes=1)
+    ).isoformat()
+    params["files"][0]["sizeBytes"] += 1
+    # Reset the report_warning() mock state due to the fact that we've exercised
+    # the auto-terminal-jobevent-creation logic above through our lack of manual
+    # JobEvent creation, which will have invoked report_warning().
+    report_warning.reset_mock()
+    # Make the JobComplete update request.
+    res = client.register_job_complete(**params)
+    # Check that the JobComplete has been updated.
+    job_complete = JobComplete.objects.get(job_start_id=job_start.id)
+    assert job_complete.output_bytes == params["output_bytes"]
+    assert job_complete.created_at.isoformat() == params["created_at"]
+    # Check that the old JobFile was deleted.
+    with raises(JobFile.DoesNotExist):
+        job_files[0].refresh_from_db()
+    # Check that Sentry was notified of the deletion.
+    report_warning.assert_called_once()
+    assert (
+        report_warning.call_args.args[0]
+        == "Deleted preexisting JobFile(s) during JobComplete update"
+    )
+    assert report_warning.call_args.kwargs["context"]["job_files"] == [
+        model_to_dict(job_files[0])
+    ]
+    # Check that the new JobFile was created.
+    new_job_files = job_complete.jobfile_set.all()
+    assert len(new_job_files) == 1
+    assert new_job_files[0].size_bytes == params["files"][0]["sizeBytes"]
+
+    # Check that the JobFile associated with the other JobComplete was not
+    # affected, using model_to_dict() instead of a direct == because the latter
+    # only tests for an identical primary key value.
+    assert model_to_dict(
+        JobComplete.objects.get(job_start_id=other_job_start.id).jobfile_set.first()
+    ) == model_to_dict(other_job_file)
 
 
 @mark.django_db
