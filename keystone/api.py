@@ -817,7 +817,7 @@ def list_available_jobs(request, collection_id: Optional[int] = None):
     the response from the ARCH /api/available-jobs endpoint."""
 
     def cat_img_url(job_cat):
-        return static(f"/img/category/{job_cat.name.lower().replace(' ', '-')}.png")
+        return static(f"/img/category/{job_cat.name.lower().replace(' ', '-')}.svg")
 
     # If a collection ID was not specified, return all user-runnable JobTypes, otherwise
     # filter by collection-specific JobTypes.
