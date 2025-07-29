@@ -26,10 +26,13 @@ export declare class ArchSubCollectionBuilder extends LitElement {
     urlPrefixInputAdder: ArchInputAdder;
     untranslatableSurtAlert: ArchAlert;
     surtPrefixInputAdder: ArchInputAdder;
+    statusInputAdder: ArchInputAdder;
+    mimeInputAdder: ArchInputAdder;
     static styles: import("lit").CSSResult[];
     connectedCallback(): Promise<void>;
     render(): TemplateResult<1>;
     private inputHandler;
+    private refreshData;
     private initCollections;
     private setSourceCollectionIdsUrlParam;
     private sourceCollectionsChangeHandler;
@@ -47,11 +50,13 @@ export declare class ArchSubCollectionBuilder extends LitElement {
     private doPost;
     validateForm(): boolean;
     private get successModalContent();
-    private resetUrlSurtPrefixInputs;
+    resetInputAdderInputs(): void;
     private createSubCollection;
     private static urlPrefixInputAdderValidator;
     private static surtPrefixInputAdderValidator;
     private purgeOldSurtPrefixExpandedPrefixesMapEntries;
+    private static statusInputAdderValidator;
+    private static mimeInputAdderValidator;
     private syncUrlSurtPrefixes;
     private surtPrefixItemWrapper;
 }

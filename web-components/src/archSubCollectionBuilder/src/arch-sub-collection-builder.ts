@@ -12,10 +12,7 @@ import "@spectrum-web-components/theme/src/themes.js";
 import { Tabs } from "@spectrum-web-components/tabs";
 
 import ArchAPI from "../../lib/ArchAPI";
-import {
-  HtmlStatusCodeRegex,
-  UrlCollectionsParamName,
-} from "../../lib/constants";
+import { UrlCollectionsParamName } from "../../lib/constants";
 import {
   Paths,
   assertIsValidWildcardPatternUrl,
@@ -51,13 +48,6 @@ import ValidMediaTypeSubTypesMap from "./mediaTypes.js";
  * Helpers
  */
 
-function splitFieldValue(s: string): Array<string> {
-  return s
-    .split("|")
-    .map((x) => x.trim())
-    .filter((x) => x !== "");
-}
-
 function prepareDatetimeFieldValue(isoDateStr: string): string {
   // Convert Date to ARCH timestamp string (yyyyMMddHHmmSS).
   const d = new Date(isoDateStr);
@@ -91,6 +81,8 @@ export class ArchSubCollectionBuilder extends LitElement {
   @query("#url-prefix-input-adder") urlPrefixInputAdder!: ArchInputAdder;
   @query("#untranslatable-surt-alert") untranslatableSurtAlert!: ArchAlert;
   @query("#surt-prefix-input-adder") surtPrefixInputAdder!: ArchInputAdder;
+  @query("#status-input-adder") statusInputAdder!: ArchInputAdder;
+  @query("#mime-input-adder") mimeInputAdder!: ArchInputAdder;
 
   static styles = styles;
 
@@ -105,18 +97,6 @@ export class ArchSubCollectionBuilder extends LitElement {
         .getAll(UrlCollectionsParamName)
         .map((s) => parseInt(s))
     );
-
-    // Set the URL prefix ArchInputAdder handlers.
-    this.urlPrefixInputAdder.inputValidator =
-      ArchSubCollectionBuilder.urlPrefixInputAdderValidator;
-    this.urlPrefixInputAdder.onChange = this.syncUrlSurtPrefixes.bind(this);
-
-    // Set the SURT prefix ArchInputAdder handlers.
-    this.surtPrefixInputAdder.inputValidator =
-      ArchSubCollectionBuilder.surtPrefixInputAdderValidator;
-    this.surtPrefixInputAdder.onChange = this.syncUrlSurtPrefixes.bind(this);
-    this.surtPrefixInputAdder.itemWrapperFn =
-      this.surtPrefixItemWrapper.bind(this);
   }
 
   render() {
@@ -213,6 +193,8 @@ export class ArchSubCollectionBuilder extends LitElement {
                   alreadyAddedText="URL prefix already added"
                   valuesTitle=""
                   id="url-prefix-input-adder"
+                  .inputValidator=${ArchSubCollectionBuilder.urlPrefixInputAdderValidator}
+                  .onChange=${this.syncUrlSurtPrefixes.bind(this)}
                 ></arch-input-adder>
               </div>
             </sp-tab-panel>
@@ -241,6 +223,9 @@ export class ArchSubCollectionBuilder extends LitElement {
                   valuesTitle=""
                   preserveTrailingWhitespace
                   id="surt-prefix-input-adder"
+                  .inputValidator=${ArchSubCollectionBuilder.surtPrefixInputAdderValidator}
+                  .onChange=${this.syncUrlSurtPrefixes.bind(this)}
+                  .itemWrapperFn=${this.surtPrefixItemWrapper.bind(this)}
                   ><div></div
                 ></arch-input-adder>
               </div>
@@ -292,17 +277,19 @@ export class ArchSubCollectionBuilder extends LitElement {
             target="_blank"
             >HTTP status code/s</a
           >.
-          <br />
-          Separate multiple HTTP Status values with a <code>|</code> character
-          and no space in-between.
         </em>
-        <input
-          type="text"
-          name="statusPrefixesOR"
-          id="status"
+        <arch-input-adder
+          inputType="number"
+          inputName="statusPrefixesOR"
+          inputCtaText="200"
+          alreadyAddedText="Status code already added"
+          valuesTitle=""
+          id="status-input-adder"
           aria-labelledby="status statusDesc"
-          placeholder="200"
-        />
+          .inputValidator=${ArchSubCollectionBuilder.statusInputAdderValidator}
+          .onChange=${this.refreshData.bind(this)}
+          ><div></div
+        ></arch-input-adder>
 
         <label for="mime"> MIME Type </label>
         <em id="mimeDesc">
@@ -313,17 +300,20 @@ export class ArchSubCollectionBuilder extends LitElement {
             target="_blank"
             >MIME type/s</a
           >.
-          <br />
-          Separate multiple MIMEs with a <code>|</code> character and no space
-          in-between.
         </em>
-        <input
-          type="text"
-          name="mimesOR"
-          id="mime"
+        <arch-input-adder
+          inputType="text"
+          inputName="mimesOR"
+          inputCtaText="text/html"
+          alreadyAddedText="MIME already added"
+          valuesTitle=""
+          id="mime-input-adder"
           aria-labelledby="mime mimeDesc"
-          placeholder="text/html|application/pdf"
-        />
+          .inputValidator=${ArchSubCollectionBuilder.mimeInputAdderValidator}
+          .onChange=${this.refreshData.bind(this)}
+          ><div></div
+        ></arch-input-adder>
+
         <br />
         <arch-sub-collection-builder-submit-button
           .validateForm=${this.validateForm.bind(this)}
@@ -342,6 +332,14 @@ export class ArchSubCollectionBuilder extends LitElement {
       (e.target as HTMLInputElement | HTMLSelectElement).setCustomValidity("");
     }
     this.data = this.formData;
+  }
+
+  private refreshData() {
+    /* Do a component update to refresh the hidden surtPrefix input field set and invoke
+     * inputHandler() to update this.data, and indirectly, submitButton.data.
+     */
+    this.requestUpdate();
+    void this.updateComplete.then(() => this.inputHandler(null));
   }
 
   private async initCollections() {
@@ -373,10 +371,10 @@ export class ArchSubCollectionBuilder extends LitElement {
     FormFieldName,
     (s: FormFieldValue) => ParsedFormFieldValue
   > = {
-    mimesOR: (s) => splitFieldValue(s as string),
+    mimesOR: (s) => identity<string>(s as string),
     name: (s) => identity<string>(s as string),
     sources: (s) => identity<Array<string>>(s as Array<string>),
-    statusPrefixesOR: (s) => splitFieldValue(s as string),
+    statusPrefixesOR: (s) => identity<string>(s as string),
     surtPrefixesOR: (s) => identity<string>(s as string),
     timestampFrom: (s) => identity<string>(s as string),
     timestampTo: (s) => identity<string>(s as string),
@@ -385,24 +383,7 @@ export class ArchSubCollectionBuilder extends LitElement {
   fieldValueValidatorMessagePairMap: Record<
     string,
     [(s: string) => boolean, string]
-  > = {
-    statusPrefixesOR: [
-      (s) => HtmlStatusCodeRegex.test(s),
-      "Please correct the invalid status code(s)",
-    ],
-    mimesOR: [
-      (s) => {
-        const splits = s.split("/");
-        return (
-          splits.length === 2 &&
-          (ValidMediaTypeSubTypesMap as Record<string, Array<string>>)[
-            splits[0]
-          ]?.includes(splits[1])
-        );
-      },
-      "Please correct the invalid MIME(s)",
-    ],
-  };
+  > = {};
 
   fieldValuePreSendPrepareMap: Map<
     keyof DecodedFormData,
@@ -476,7 +457,12 @@ export class ArchSubCollectionBuilder extends LitElement {
   get formData(): DecodedFormData {
     // Return the <form> inputs as a validated, API POST-ready object.
     const formData = new FormData(this.form);
-    const getAllKeys = new Set(["sources", "surtPrefixesOR"]);
+    const getAllKeys = new Set([
+      "mimesOR",
+      "sources",
+      "statusPrefixesOR",
+      "surtPrefixesOR",
+    ]);
     let data = Object.fromEntries(
       Array.from(new Set(formData.keys()).values()) // use Set to dedupe keys
         .map((k) => [
@@ -578,14 +564,21 @@ export class ArchSubCollectionBuilder extends LitElement {
     });
   }
 
-  private resetUrlSurtPrefixInputs() {
-    // Reset the URL/SURT Prefixes inputs.
-    const { urlPrefixInputAdder, urlSurtPrefixTabs, surtPrefixInputAdder } =
-      this;
+  resetInputAdderInputs() {
+    // Reset the ArchInputAdder-type inputs.
+    const {
+      mimeInputAdder,
+      statusInputAdder,
+      urlPrefixInputAdder,
+      urlSurtPrefixTabs,
+      surtPrefixInputAdder,
+    } = this;
     urlPrefixInputAdder.values = [];
     surtPrefixInputAdder.values = [];
     this.syncUrlSurtPrefixes();
     urlSurtPrefixTabs.selected = "urlPrefixes";
+    statusInputAdder.values = [];
+    mimeInputAdder.values = [];
   }
 
   private async createSubCollection(e: Event) {
@@ -597,7 +590,7 @@ export class ArchSubCollectionBuilder extends LitElement {
     if (res.ok) {
       // Request was successful. Reset the form and show the notification modal.
       this.form.reset();
-      this.resetUrlSurtPrefixInputs();
+      this.resetInputAdderInputs();
       ArchGlobalModal.showNotification(
         "ARCH is creating your custom collection",
         this.successModalContent,
@@ -619,10 +612,10 @@ export class ArchSubCollectionBuilder extends LitElement {
     try {
       url = new URL(urlPrefix);
     } catch {
-      throw new Error("Enter a valid HTTP URL");
+      throw new Error("Please enter a valid HTTP URL");
     }
     if (!url.protocol.toLowerCase().startsWith("http")) {
-      throw new Error("Enter a valid HTTP URL");
+      throw new Error("Please enter a valid HTTP URL");
     }
     // Strip any "www." hostname prefix to mirror SURT behavior.
     if (url.hostname.startsWith("www.")) {
@@ -639,7 +632,7 @@ export class ArchSubCollectionBuilder extends LitElement {
   private static surtPrefixInputAdderValidator(surtPrefix: string): string {
     // Use SURT() to validate and normalize the surtPrefix value.
     if (!checkSurt(surtPrefix).isValid) {
-      throw new Error("Enter a valid SURT");
+      throw new Error("Please enter a valid SURT");
     }
     return surtPrefix;
   }
@@ -653,6 +646,27 @@ export class ArchSubCollectionBuilder extends LitElement {
     Object.keys(surtPrefixExpandedPrefixesMap)
       .filter((k) => !surtPrefixInputAdder.values.includes(k))
       .forEach((k) => delete surtPrefixExpandedPrefixesMap[k]);
+  }
+
+  private static statusInputAdderValidator(statusCode: string): string {
+    const n = parseInt(statusCode);
+    if (!(n >= 100 && n <= 599)) {
+      throw new Error("Please enter a valid status code in range: 100 - 599");
+    }
+    return statusCode;
+  }
+
+  private static mimeInputAdderValidator(mime: string): string {
+    const splits = mime.split("/");
+    if (
+      splits.length !== 2 ||
+      !(ValidMediaTypeSubTypesMap as Record<string, Array<string>>)[
+        splits[0]
+      ]?.includes(splits[1])
+    ) {
+      throw new Error("Please enter a valid MIME");
+    }
+    return mime;
   }
 
   private syncUrlSurtPrefixes() {
@@ -731,10 +745,7 @@ export class ArchSubCollectionBuilder extends LitElement {
       `;
       untranslatableSurtAlert.show();
     }
-    // Do a component update to refresh the hidden surtPrefix input field set and invoke
-    // inputHandler() to update this.data, and indirectly, submitButton.data.
-    this.requestUpdate();
-    void this.updateComplete.then(() => this.inputHandler(null));
+    this.refreshData();
   }
 
   private surtPrefixItemWrapper(surtPrefix: string): string | TemplateResult {
