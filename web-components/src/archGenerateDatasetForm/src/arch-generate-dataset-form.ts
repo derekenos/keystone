@@ -44,15 +44,39 @@ import { ArchJobCategorySection } from "./arch-job-category-section";
 import Styles from "./styles";
 
 // Define the display order of known categories and jobs.
-const sortedCatNames = ["Collection", "Network", "Text", "File Formats"];
+const sortedCatNames = [
+  "Collection",
+  "Network",
+  "Text",
+  "Images",
+  "Speech",
+  "File Formats",
+];
 
 const catNameSortedJobNamesMap: Record<
   AvailableJobsCategory["categoryName"],
   Array<AvailableJob["name"]>
 > = {
   Collection: ["Domain frequency", "Web archive transformation (WAT)"],
-  Network: ["Domain graph", "Image graph", "Longitudinal graph", "Web graph"],
-  Text: ["Named entities", "Plain text of webpages", "Text file information"],
+  Network: ["Domain graph", "Web graph", "Longitudinal graph"],
+  Text: [
+    "Plain text of webpages",
+    "Text file information",
+    "Named entities",
+    "Extracted text",
+    "Named entities from extracted text",
+  ],
+  Images: [
+    "Image file information",
+    "Image graph",
+    "Text recognition",
+    "Text recognition with named entities",
+  ],
+  Speech: [
+    "Speech recognition",
+    "Speech recognition with technical metadata",
+    "Speech recognition with named entities",
+  ],
   "File Formats": [
     "Audio file information",
     "Image file information",
