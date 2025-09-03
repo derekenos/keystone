@@ -303,6 +303,16 @@ const ht=globalThis,vt=ht.trustedTypes,gt=vt?vt.createPolicy("lit-html",{createH
       margin-top: 2rem;
       text-align: right;
     }
+
+    /*
+     * Some components slot in content, while others directly create
+     * children of the <slot> element itself, so we need to style both.
+     */
+    slot[name="content"] > *,
+    slot[name="content"]::slotted(*) {
+      max-height: 50vh;
+      overflow-y: auto;
+    }
   `];let pe=class extends(me(u)){constructor(){super(...arguments),this.hideCancelButton=!1,this.hideSubmitButton=!1,this.cancelButtonClass="",this.cancelButtonText="Cancel",this.submitButtonClass="primary",this.submitButtonText="Confirm",this.title="",this.content=s``}renderDialogContent(){const{cancelButtonClass:t,cancelButtonText:o,content:e,hideCancelButton:r,hideSubmitButton:n,submitButtonClass:i,submitButtonText:c,title:a}=this;return s`
       <h2 slot="heading">${a}</h2>
       <slot name="content">${e}</slot>
