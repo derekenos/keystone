@@ -68,7 +68,7 @@ function prepareDatetimeFieldValue(isoDateStr: string): string {
 export class ArchSubCollectionBuilder extends LitElement {
   @property({ type: String }) csrfToken!: string;
 
-  @state() collections: Array<Collection> = [];
+  @state() collections: undefined | Array<Collection> = undefined;
   @state() sourceCollectionIds: Set<Collection["id"]> = new Set();
   @state() data: undefined | DecodedFormData = undefined;
   @state() surtPrefixExpandedPrefixesMap: Record<string, Array<string>> = {};
@@ -101,9 +101,10 @@ export class ArchSubCollectionBuilder extends LitElement {
 
   render() {
     const { collections, sourceCollectionIds } = this;
-    const sourceCollections = collections.filter((x) =>
-      sourceCollectionIds.has(x.id)
-    );
+    const sourceCollections =
+      collections === undefined
+        ? []
+        : collections.filter((x) => sourceCollectionIds.has(x.id));
     return html`
       <arch-alert
         .alertClass=${AlertClass.Primary}
@@ -132,22 +133,27 @@ export class ArchSubCollectionBuilder extends LitElement {
           required
           multiple
           size="8"
-          ?disabled=${this.collections.length === 0}
+          ?disabled=${collections === undefined
+            ? true
+            : collections.length === 0}
           @change=${this.sourceCollectionsChangeHandler}
         >
-          ${this.collections.length === 0
+          ${collections === undefined
             ? html`<option value="">Loading Collections...</option>`
-            : html``}
-          ${collections.map(
-            (collection) => html`
-              <option
-                value="${collection.id}"
-                ?selected=${sourceCollectionIds.has(collection.id)}
-              >
-                ${collection.name}
-              </option>
-            `
-          )}
+            : collections.length === 0
+            ? html`<option value="">
+                No eligible input collections found
+              </option>`
+            : collections.map(
+                (collection) => html`
+                  <option
+                    value="${collection.id}"
+                    ?selected=${sourceCollectionIds.has(collection.id)}
+                  >
+                    ${collection.name}
+                  </option>
+                `
+              )}
         </select>
 
         <label for="name" class="required"> Custom Collection Name </label>
