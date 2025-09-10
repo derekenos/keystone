@@ -17,6 +17,7 @@ export default {
     "./src/archCollectionDetailsDatasetTable/src/arch-collection-details-dataset-table.ts",
     "./src/archCollectionsCard/src/arch-collections-card.ts",
     "./src/archCollectionsTable/src/arch-collections-table.ts",
+    "./src/archContenteditable/src/arch-contenteditable.ts",
     "./src/archDatasetExplorerTable/src/arch-dataset-explorer-table.ts",
     "./src/archDatasetMetadataForm/src/arch-dataset-metadata-form.ts",
     "./src/archDatasetPublishingCard/src/arch-dataset-publishing-card.ts",

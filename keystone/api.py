@@ -85,6 +85,7 @@ from .models import (
     User,
     UserRoles,
 )
+from .permissions import Permissions
 from .schemas import (
     AvailableJobsCategory,
     CollectionFilterSchema,
@@ -110,6 +111,7 @@ from .schemas import (
     SubCollectionCreationRequest,
     TeamFilterSchema,
     TeamSchema,
+    UpdateCollectionSchema,
     UpdateTeamSchema,
     UpdateUserSchema,
     UserFilterSchema,
@@ -584,7 +586,7 @@ def user_can_run_job(
     """
     user = get_object_or_404(User, username=username)
     # job_type = get_object_or_404(JobType, name=job_type_name, version=job_type_version)
-    if not user.has_perms(["keystone.add_job_start"]):
+    if not user.has_perms([Permissions.ADD_JOBSTART]):
         raise HttpError(403, PermissionResponse(allow=False))
     # collections = get_list_or_404(Collection, name__in=collections)
     # quotas = ArchQuota.fetch_for_user(user)
@@ -791,8 +793,8 @@ def get_dataset(request, dataset_id: int):
 def update_dataset_teams(request, dataset_id: int, payload: List[MinimalTeamSchema]):
     """Retrieve a specific Dataset"""
     dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
-    # Only the dataset owner is allowed to update teams.
-    if request.user != dataset.job_start.user:
+    # Enforce permissions.
+    if not request.user.has_perm(Permissions.CHANGE_DATASET_TEAMS, dataset):
         raise PermissionDenied
     # Check that the user is a member of all the specified teams.
     team_ids = set(t.id for t in payload)
@@ -881,9 +883,11 @@ def users_filter_values(request, field: str):
 def get_user(request, user_id: int):
     """Return a single User."""
     req_user = request.user
-    if req_user.role != UserRoles.ADMIN and user_id != req_user.id:
+    target_user = User.objects.get(id=user_id)
+    # Enforce permissions.
+    if not req_user.has_perm(Permissions.VIEW_USER, target_user):
         raise PermissionDenied
-    return User.objects.filter(account=req_user.account).get(id=user_id)
+    return target_user
 
 
 @public_api.put("/users", response={HTTPStatus.CREATED: UserSchema})
@@ -892,11 +896,15 @@ def get_user(request, user_id: int):
 def create_user(request, payload: CreateUserSchema, send_welcome: bool):
     """Create a new User."""
     # Deny if the requesting and target user accounts are not the same.
-    if payload.account_id != request.user.account_id:
-        raise PermissionDenied
     payload_d = payload.dict()
     teams = payload_d.pop("teams", ())
-    new_user = User.objects.create(**payload_d)
+    # Instantiate a User for permissions testing.
+    new_user = User(**payload_d)
+    # Enforce permissions.
+    if not request.user.has_perm(Permissions.ADD_USER, new_user):
+        raise PermissionDenied
+    # Create the user.
+    new_user.save()
     # Handle "teams".
     new_user.teams.set(Team.objects.filter(id__in={t["id"] for t in teams}))
     # Maybe send welcome email.
@@ -918,41 +926,52 @@ def create_user(request, payload: CreateUserSchema, send_welcome: bool):
     return HTTPStatus.CREATED, new_user
 
 
+@public_api.patch("/collections/{int:collection_id}", response=CollectionSchema)
+def update_collection(request, payload: UpdateCollectionSchema, collection_id: int):
+    """Update an existing Collection."""
+    req_user = request.user
+    collection = Collection.objects.get(id=collection_id)
+    # Enforce permissions.
+    if not req_user.has_perm(Permissions.CHANGE_COLLECTION, collection):
+        raise PermissionDenied
+    for k, v in payload.dict().items():
+        setattr(collection, k, v)
+    collection.save()
+    return collection
+
+
 @public_api.patch("/users/{user_id}", response=UserSchema)
 def update_user(request, payload: UpdateUserSchema, user_id: int):
     """Update an existing User."""
     req_user = request.user
     req_user_is_admin = req_user.role == UserRoles.ADMIN
-    # Deny request if not admin or target is not self.
-    if not req_user_is_admin and user_id != req_user.id:
-        raise PermissionDenied
-    existing_user = User.objects.get(id=user_id)
-    # Deny if the requesting and target user accounts are not the same.
-    if existing_user.account_id != req_user.account_id:
+    target_user = User.objects.get(id=user_id)
+    # Enforce permissions.
+    if not req_user.has_perm(Permissions.CHANGE_USER, target_user):
         raise PermissionDenied
     updated = False
     for k, v in payload.dict(exclude_none=True).items():
-        if getattr(existing_user, k) != v:
+        if getattr(target_user, k) != v:
             # A user is not allowed to modify their own role.
-            if k == "role" and existing_user == req_user:
+            if k == "role" and target_user == req_user:
                 raise PermissionDenied("self role modification not allowed")
             # Handle "teams".
             if k == "teams":
                 team_ids = {x["id"] for x in v}
-                if team_ids != set(existing_user.teams.values_list("id", flat=True)):
+                if team_ids != set(target_user.teams.values_list("id", flat=True)):
                     if req_user_is_admin:
-                        existing_user.teams.set(Team.objects.filter(id__in=team_ids))
+                        target_user.teams.set(Team.objects.filter(id__in=team_ids))
                     else:
                         raise PermissionDenied(
                             "only account admins can update user teams"
                         )
             else:
-                setattr(existing_user, k, v)
+                setattr(target_user, k, v)
                 updated = True
     if updated:
-        existing_user.save()
+        target_user.save()
 
-    return existing_user
+    return target_user
 
 
 @public_api.get("/teams", response=List[TeamSchema])
@@ -970,10 +989,13 @@ def list_account_teams(request, filters: TeamFilterSchema = Query(...)):
 @require_admin
 def create_team(request, payload: CreateTeamSchema):
     """Create a new Team."""
-    # Deny if the requesting and target user accounts are not the same.
-    if payload.account_id != request.user.account_id:
+    # Instantiate a Team for permissions testing.
+    new_team = Team(**payload.dict())
+    # Enforce permissions.
+    if not request.user.has_perm(Permissions.ADD_TEAM, new_team):
         raise PermissionDenied
-    new_team = Team.objects.create(**payload.dict())
+    # Create the team.
+    new_team.save()
     return HTTPStatus.CREATED, new_team
 
 
@@ -981,26 +1003,23 @@ def create_team(request, payload: CreateTeamSchema):
 def update_team(request, payload: UpdateTeamSchema, team_id: int):
     """Update an existing Team."""
     req_user = request.user
-    # Deny request if not admin or target is not self.
-    if req_user.role != UserRoles.ADMIN:
-        raise PermissionDenied
-    existing_team = Team.objects.get(id=team_id)
-    # Deny if the requesting and target accounts are not the same.
-    if existing_team.account_id != req_user.account_id:
+    team = Team.objects.get(id=team_id)
+    # Enforce permissions.
+    if not req_user.has_perm(Permissions.CHANGE_TEAM, team):
         raise PermissionDenied
     payload_d = payload.dict()
     # Handle 'name'.
     name = payload_d.get("name")
-    if name and name != existing_team.name:
-        existing_team.name = payload.name
-        existing_team.save()
+    if name and name != team.name:
+        team.name = payload.name
+        team.save()
     # Handle 'members'.
     members = payload_d.get("members")
     if members is not None:
         member_ids = {x["id"] for x in members}
-        if member_ids != set(existing_team.members.values_list("id", flat=True)):
-            existing_team.members.set(User.objects.filter(id__in=member_ids))
-    return existing_team
+        if member_ids != set(team.members.values_list("id", flat=True)):
+            team.members.set(User.objects.filter(id__in=member_ids))
+    return team
 
 
 ###############################################################################
@@ -1066,8 +1085,8 @@ def dataset_published_status(request, dataset_id: int):
 def publish_dataset(request, dataset_id: int, metadata: DatasetPublicationMetadata):
     """Publish a dataset"""
     dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
-    # Only the dataset owner is allowed to publish.
-    if request.user != dataset.job_start.user:
+    # Enforce permissions.
+    if not request.user.has_perm(Permissions.PUBLISH_DATASET, dataset):
         raise PermissionDenied
     return ArchAPI.publish_dataset(
         request.user,
@@ -1101,8 +1120,8 @@ def update_published_item_metadata(
 ):
     """Update the metadata of a published Dataset petabox item"""
     dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
-    # Only the dataset owner is allowed to update metadata.
-    if request.user != dataset.job_start.user:
+    # Allow any authorized publishers to edit the metadata.
+    if not request.user.has_perm(Permissions.PUBLISH_DATASET, dataset):
         raise PermissionDenied
     ArchAPI.update_published_item_metadata(
         request.user, dataset.job_start.id, metadata.dict(exclude_none=True)
@@ -1114,10 +1133,10 @@ def update_published_item_metadata(
     "/datasets/{dataset_id}/publication", response={HTTPStatus.ACCEPTED: None}
 )
 def delete_published_item(request, dataset_id: int):
-    """Update the metadata of a published Dataset petabox item"""
+    """Delete (i.e hide) a published Dataset"""
     dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
-    # Only the dataset owner is allowed to delete the item.
-    if request.user != dataset.job_start.user:
+    # Allow any authorized publishers to unpublish.
+    if not request.user.has_perm(Permissions.PUBLISH_DATASET, dataset):
         raise PermissionDenied
     ArchAPI.delete_published_item(request.user, dataset.job_start.id)
     return HTTPStatus.ACCEPTED, None

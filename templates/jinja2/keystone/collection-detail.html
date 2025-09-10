@@ -7,12 +7,22 @@
 {% extends 'keystone/base.html' %}
 
 {% block header_title %}
+{% if collection.collection_type == CollectionTypes.CUSTOM and request.user.has_perm(Permissions.CHANGE_COLLECTION, collection) %}
+<arch-contenteditable
+  modelName="collection"
+  instanceUrl="{{ url('public:update_collection', args=(collection.id,)) }}"
+  fieldName="name"
+  updatePageRefSelectors="[&quot;ul.breadcrumbs &gt; li:nth-child(2) &gt; a&quot;]"
+  csrfToken="{{ csrf_token }}"
+>{{ collection.name }}</arch-contenteditable>
+{% else %}
 {{ collection.name }}
+{% endif %}
 {% endblock %}
-
 
 {% block head_extra %}
 <script src="{{ static('/js/arch-collection-details-dataset-table.js') }}" type="module"></script>
+<script src="{{ static('/js/arch-contenteditable.js') }}" type="module"></script>
 {% endblock %}
 
 {% block content %}

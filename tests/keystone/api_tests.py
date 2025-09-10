@@ -11,9 +11,14 @@ from pytest import (
     raises,
 )
 
-from config.settings import GLOBAL_USER_USERNAME
+from config.settings import (
+    GLOBAL_USER_USERNAME,
+    KnownArchJobUuids,
+)
+
 from keystone.api import CreateUserSchema
 from keystone.models import (
+    CollectionTypes,
     Dataset,
     Team,
     User,
@@ -89,6 +94,11 @@ class Client(_Client):
             "application/json",
         )
 
+    def update_collection(self, collection, update_d):
+        return self.patch(
+            f"/api/collections/{collection.id}", update_d, "application/json"
+        )
+
 
 ###############################################################################
 # /api/users tests
@@ -153,7 +163,7 @@ def test_admin_cant_get_different_account_user(make_account, make_user):
     client = Client(admin_user)
     for user in other_account_admin, other_account_user:
         res = client.get_user(user.id)
-        assert res.status_code == HTTPStatus.NOT_FOUND
+        assert res.status_code == HTTPStatus.FORBIDDEN
 
 
 @mark.django_db
@@ -575,3 +585,75 @@ def test_non_dataset_owner_can_not_update_teams(
     # is forbidden.
     res = Client(non_owner).update_dataset_teams(dataset.id, [team])
     assert res.status_code == HTTPStatus.FORBIDDEN
+
+
+###############################################################################
+# /api/collections tests
+###############################################################################
+
+
+@mark.django_db
+@mark.parametrize("is_superuser", (True, False))
+@mark.parametrize(
+    "field",
+    (
+        "arch_id",
+        "description",
+        "collection_type",
+        "created_at",
+        "size_bytes",
+        "info_url",
+        "metadata",
+    ),
+)
+def test_only_collection_name_can_be_updated(
+    is_superuser, field, make_collection, make_user
+):
+    """The Collection endpoint does not support updates to any non-name field"""
+    user = make_user(is_superuser=is_superuser)
+    collection = make_collection()
+    res = Client(user).update_collection(
+        collection, {field: getattr(collection, field)}
+    )
+    assert res.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+
+@mark.django_db
+def test_superuser_can_update_any_collection(make_collection, make_user):
+    """A superuser can update any collection instance"""
+    user = make_user(is_superuser=True)
+    # Create a collection from a totally different account.
+    collection = make_collection(name="original name")
+    res = Client(user).update_collection(collection, {"name": "new name"})
+    assert res.status_code == HTTPStatus.OK
+    collection.refresh_from_db()
+    assert collection.name == "new name"
+
+
+@mark.django_db
+def test_normal_user_can_rename_own_custom_collection(
+    make_collection, make_user, make_jobstart
+):
+    """A normal user has permission to change a custom collection that they created."""
+    user = make_user()
+    collection = make_collection(
+        collection_type=CollectionTypes.CUSTOM, name="original name"
+    )
+    make_jobstart(
+        collection=collection,
+        user=user,
+        job_type_id=KnownArchJobUuids.USER_DEFINED_QUERY,
+    )
+    res = Client(user).update_collection(collection, {"name": "new name"})
+    assert res.status_code == HTTPStatus.OK
+    collection.refresh_from_db()
+    assert collection.name == "new name"
+
+
+@mark.django_db
+@mark.parametrize("collection_type", ("AIT", "CUSTOM", "SPECIAL"))
+def test_normal_user_can_not_update_nonowned_noncustom_collection(
+    collection_type, make_collection, make_user
+):
+    """A normal user does not have permission to update the name of any
+    collection other than a custom collection that they created."""

@@ -31,6 +31,7 @@ from .models import (
     User,
     UserRoles,
 )
+from .permissions import Permissions
 from .plugins import get_plugin_apps
 from .schemas import (
     MULTI_INPUT_SPEC_TYPE,
@@ -301,6 +302,7 @@ def collection_detail(request, collection_id):
         context={
             "collection": collection,
             "configuration_info": configuration_info,
+            "Permissions": Permissions,
         },
     )
 

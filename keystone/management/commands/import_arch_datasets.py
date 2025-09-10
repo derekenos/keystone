@@ -75,6 +75,7 @@ You can generate this input file from ARCH using one of the following methods:
   hdfs dfs -cat '{configuredUuidOutPath}/{**/*.uuid.json,**/**/info.json}' > \
     /tmp/concatenated.uuid.json
 """
+
 import argparse
 import json
 from collections import defaultdict
