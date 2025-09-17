@@ -27,6 +27,7 @@ from .models import (
     CollectionTypes,
     Dataset,
     JobFile,
+    JobStart,
     User,
     UserRoles,
 )
@@ -217,9 +218,18 @@ def get_custom_collection_configuration_info(collection):
     """Return a configuration info dict comprising the custom collections's
     input collections and configuration parameters."""
     # Lookup the custom collection job configuration.
-    custom_conf = collection.jobstart_set.get(
-        job_type__id=settings.KnownArchJobUuids.USER_DEFINED_QUERY
-    ).parameters["conf"]
+    try:
+        custom_conf = collection.jobstart_set.get(
+            job_type__id=settings.KnownArchJobUuids.USER_DEFINED_QUERY
+        ).parameters["conf"]
+    except JobStart.DoesNotExist:
+        # If for some reason there's no associated JobStart, return
+        # input_collections=None which will will cause an error message
+        # to be displayed on the frontend.
+        return {
+            "input_collections": None,
+            "param_label_value_pairs": (),
+        }
     # Create the list of input collections.
     input_spec = custom_conf["inputSpec"]
     try:
@@ -230,7 +240,8 @@ def get_custom_collection_configuration_info(collection):
         )
     except Collection.DoesNotExist:
         # If for some reason an input_spec can't be resolved to a collection,
-        # set input_collection=None and display a message on the frontend.
+        # set input_collections=None which will cause an error message to be
+        # displayed on the frontend.
         input_collections = None
     # Create the list of param label/value pairs.
     custom_params = custom_conf["params"]
