@@ -1139,7 +1139,9 @@ def get_sample_viz_data(request, dataset_id: int):
 
 
 @wasapi_api.get(
-    "/jobs/{dataset_id}/result", url_name="file_listing", response=WasapiResponse
+    "/jobs/{dataset_id}/result",
+    url_name="file_listing",
+    response={HTTPStatus.OK: WasapiResponse, HTTPStatus.SERVICE_UNAVAILABLE: str},
 )
 def get_file_listing(request, dataset_id: PositiveInt, page: PositiveInt = 1):
     """Proxy as WASAPI datase file listing response from ARCH."""
@@ -1150,6 +1152,13 @@ def get_file_listing(request, dataset_id: PositiveInt, page: PositiveInt = 1):
         dataset.job_start.id,
         page,
     )
+    # A response of { lazy: true } indicates that ARCH isn't yet done caching the
+    # list of output files, so respond with an informative 503 - Service Unavailable.
+    if res.get("lazy") is True:
+        return HttpResponse(
+            "This file list is in the process of being generated; please try again later.",
+            status=HTTPStatus.SERVICE_UNAVAILABLE,
+        )
     # Rewrite next/previous URLs to Keystone-specific values.
     base_pagination_url = ctx_helpers(request)["abs_url"](
         "wasapi:file_listing", args=[dataset_id]
