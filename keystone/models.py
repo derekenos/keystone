@@ -28,6 +28,7 @@ from .validators import (
     validate_username,
 )
 from .helpers import is_uuid7
+from .permissions import Permissions
 from .plugins import get_plugin_apps
 
 # Define a namedtuple to return from JobStart.get_job_status()
@@ -97,6 +98,46 @@ class User(AbstractUser):
         self.email = BaseUserManager.normalize_email(self.email)
         super().save()
 
+    def has_perm(self, perm, obj=None):
+        """Return a bool indicate whether the user has the specified permission.
+        If obj is specified and obj defines a user_has_perm() method, delegate
+        to that method. Note that Django only ever invokes this method from ModelAdmin
+        and never with a non-None obj value, so our handling here of non-None obj
+        values is specific to our application.
+        """
+        # Inactive users don't have any permissions.
+        if not self.is_active:
+            return False
+        # Superusers have all permissions.
+        if self.is_superuser:
+            return True
+        # Delegate to any Model-defined user_has_perm() method.
+        if obj and hasattr(obj, "user_has_perm"):
+            return obj.user_has_perm(self, perm)
+        # The superuser clause above covers Django admin use cases, and calls to
+        # model.user_has_perm() covers all current application use cases, so deny
+        # everything else.
+        return False
+
+    def user_has_perm(self, user, perm):
+        """Users are allowed to view/change themselves, and admins are allowed to
+        view/change any user within their account.
+        """
+        # To clarify, we are checking whether `user` has permission `perm` on `self`.
+        is_account_admin = (
+            user.role == UserRoles.ADMIN and user.account_id == self.account_id
+        )
+        match perm:
+            case Permissions.VIEW_USER | Permissions.CHANGE_USER:
+                # Users are allowed to view/change themselves, and admins are allowed to
+                # view/change any user within their account.
+                return user.id == self.id or is_account_admin
+            case Permissions.ADD_USER:
+                # Admins are allowed to create users within their own account.
+                return is_account_admin
+            case _:
+                return False
+
     def __str__(self):
         return self.username
 
@@ -141,6 +182,19 @@ class Team(models.Model):
         constraints = [
             models.UniqueConstraint(Lower("name"), "account", name="team_unique")
         ]
+
+    def user_has_perm(self, user, perm):
+        """Return a bool indicating whether the user is allowed the specified permission
+        on this Team instance.
+        """
+        match perm:
+            case Permissions.ADD_TEAM | Permissions.CHANGE_TEAM:
+                # An admin has permission to create and change teams within their own account.
+                return (
+                    user.role == UserRoles.ADMIN and user.account_id == self.account_id
+                )
+            case _:
+                return False
 
     def __str__(self):
         return self.name
@@ -287,6 +341,25 @@ class Collection(models.Model):
         for plugin in get_plugin_apps():
             if plugin.is_collection_metadata_handler(self):
                 plugin.update_collection_metadata(self, timeout_ms=100)
+
+    def user_has_perm(self, user, perm):
+        """Return a bool indicating whether the user is allowed the specified permission
+        on this Collection instance.
+        """
+        match perm:
+            case Permissions.VIEW_COLLECTION:
+                # View permissions are dictated by user_queryset().
+                return self.user_queryset(user).filter(id=self.id).exists()
+            case Permissions.CHANGE_COLLECTION:
+                # Users are currently only allowed to modify custom collections
+                # of which they are the creator (i.e. associated JobStart user).
+                return JobStart.objects.filter(
+                    collection=self,
+                    job_type__id=settings.KnownArchJobUuids.USER_DEFINED_QUERY,
+                    user_id=user.id,
+                ).exists()
+            case _:
+                return False
 
     def __str__(self):
         return self.name
@@ -515,6 +588,12 @@ class Dataset(models.Model):
     finished_time = models.DateTimeField(null=True)
     teams = models.ManyToManyField("Team", blank=True, related_name="datasets")
 
+    class Meta:
+        permissions = (
+            ("change_dataset_teams", "Change Dataset Teams"),
+            ("publish_dataset", "Publish a Dataset"),
+        )
+
     def get_download_filename(self, jobfile_filename, preview=False):
         """Prefix the JobFile filename with the Keystone Dataset and Collection
         IDs to serve as the download filename."""
@@ -559,3 +638,17 @@ class Dataset(models.Model):
         dataset.start_time = start_time
         dataset.finished_time = finished_time
         dataset.save()
+
+    def user_has_perm(self, user, perm):
+        """Return a bool indicating whether the user is allowed the specified permission
+        on this Dataset instance.
+        """
+        match perm:
+            case Permissions.VIEW_DATASET:
+                # View permissions are dictated by user_queryset().
+                return self.user_queryset(user).filter(id=self.id).exists()
+            case Permissions.CHANGE_DATASET_TEAMS | Permissions.PUBLISH_DATASET:
+                # A Dataset creator is allowed to change associated teams and publish.
+                return user.id == self.job_start.user_id
+            case _:
+                return False

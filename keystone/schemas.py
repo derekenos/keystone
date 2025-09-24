@@ -375,6 +375,17 @@ class CollectionSchema(Schema):
     metadata: Optional[CollectionMetadata] = None
 
 
+class UpdateCollectionSchema(Schema):
+    """Existing Collection update schema"""
+
+    name: str
+
+    class Config:
+        """Reject requests that specify additional fields."""
+
+        extra = "forbid"
+
+
 class CollectionFilterSchema(FilterSchema):
     """Collection filters"""
 

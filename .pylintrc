@@ -35,3 +35,6 @@ disable=missing-module-docstring,
         too-few-public-methods,
         no-self-use,
         import-outside-toplevel
+
+[TYPECHECK]
+generated-members=Permissions
