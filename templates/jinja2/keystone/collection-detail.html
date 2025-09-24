@@ -38,29 +38,11 @@
           </div>
 
           <div id="metadata-icons-wrapper">
-
-            {% if object_count != None and object_name != None %}
-            <div>
-              <h3>
-                {{ intcomma(object_count) }} {{ object_name }}
-              </h3>
-              <p><i class="fa fa-files-o fa-4x" aria-hidden="true"></i></p>
-            </div>
+            {% if custom_metadata_icons_template %}
+            {% include custom_metadata_icons_template %}
+            {% else %}
+            {% include "keystone/collection-detail-metadata-icons.html" %}
             {% endif %}
-
-            {% if collection.size_bytes > 0 or collection.collection_type != "SPECIAL" %}
-            <div>
-              <h3>
-                {{ collection.size_bytes | filesizeformat(binary=True) }}
-              </h3>
-              <p><i class="fa fa-database fa-4x" aria-hidden="true"></i></p>
-            </div>
-            {% endif %}
-
-            {% if collection.collection_type == CollectionTypes.AIT %}
-            {% include 'keystone/collection-detail-ait-extra-icons.html' %}
-            {% endif %}
-
           </div>
 
           <div id="metadata-description-wrapper">

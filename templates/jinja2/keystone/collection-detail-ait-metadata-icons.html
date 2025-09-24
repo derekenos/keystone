@@ -1,15 +1,27 @@
+{% set last_crawl_date = metadata.get("last_crawl_date") %}
 
-{% if "last_crawl_date" in metadata %}
-{% set last_crawl_date = metadata["last_crawl_date"] %}
 <div>
-  {% if last_crawl_date == None %}
+  <h3>
+    {{ intcomma(object_count or 0) }} {{ object_name }}
+  </h3>
+  <p><i class="fa fa-files-o fa-4x" aria-hidden="true"></i></p>
+</div>
+
+<div>
+  <h3>
+    {{ collection.size_bytes | filesizeformat(binary=True) }}
+  </h3>
+  <p><i class="fa fa-database fa-4x" aria-hidden="true"></i></p>
+</div>
+
+<div>
+  {% if not last_crawl_date %}
   <h3>No Crawls</h3>
   {% else %}
   <h3>Crawled {{ datetime.datetime.fromisoformat(last_crawl_date).date() }}</h3>
   {% endif %}
   <p><i class="fa fa-calendar-o fa-4x" aria-hidden="true"></i></p>
 </div>
-{% endif %}
 
 {% set is_public = metadata.get("is_public") %}
 {% if is_public != None %}

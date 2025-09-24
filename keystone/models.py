@@ -241,6 +241,11 @@ class Collection(models.Model):
 
     def save(self, *args, **kwargs):
         """Validate and clean metadata prior to save."""
+        # Field "validators will not be run automatically when you save a model"
+        # https://docs.djangoproject.com/en/4.2/ref/validators/#how-validators-are-run
+        # We're calling validate_and_clean_collection_metadata() here instead of
+        # self.clean_fields() so that we can pass in the Collection instance itself to
+        # verify agreement between collection_type and detected metadata type.
         self.metadata = validate_and_clean_collection_metadata(self.metadata, self)
         return super().save(*args, **kwargs)
 

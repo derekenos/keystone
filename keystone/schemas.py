@@ -1,15 +1,16 @@
 from datetime import datetime
-from enum import Enum
 from itertools import chain
 from uuid import UUID
+from types import NoneType
 from typing import (
     List,
     Literal,
     Optional,
     Tuple,
     Union,
+    get_args,
+    get_origin,
 )
-from typing_extensions import Annotated
 
 from django.db.models import Q
 from ninja import (
@@ -18,15 +19,17 @@ from ninja import (
     ModelSchema,
     Schema,
 )
-from pydantic import (
-    ValidationError,
-    NonNegativeInt,
-)
-
+from pydantic import NonNegativeInt
 
 from .plugins import get_plugin_apps
+from .plugin_available_schemas import (
+    CdxFilterQuery,
+    CollectionMetadataBase,
+    FilesInputSpec,
+    InputSpecBase,
+    StrictSchema,
+)
 from .models import (
-    Collection,
     JobStart,
     JobEvent,
     JobEventTypes,
@@ -50,15 +53,6 @@ TERMINAL_JOB_EVENT_TYPES = tuple(
 ###############################################################################
 
 
-class StrictSchema(Schema):
-    """Schema subclass that forbids extra fields."""
-
-    class Config:
-        """Forbid extra fields."""
-
-        extra = "forbid"
-
-
 class DatasetFileSchema(Schema):
     """Response schema for a DatasetFile object."""
 
@@ -70,15 +64,6 @@ class DatasetFileSchema(Schema):
     creationTime: str
     md5Checksum: Optional[str]
     accessToken: str
-
-
-class InputSpecBase(StrictSchema):
-    """InputSpec base schema."""
-
-    def dict(self, exclude_none=True, **kwargs):
-        """Override dict() with default of exclude_none=True"""
-
-        return super().dict(exclude_none=exclude_none, **kwargs)
 
 
 ###############################################################################
@@ -184,7 +169,7 @@ class PermissionResponse(Schema):
 
 
 ###############################################################################
-# ARCH Collection Input Spec Schema
+# Public API Schemas
 ###############################################################################
 
 
@@ -213,119 +198,7 @@ class CDXDatasetInputSpec(InputSpecBase):
         return True
 
 
-class FilesInputSpecDataSource(Enum):
-    """The files-type input spec dataSource values that ARCH supports
-    by default."""
-
-    # pylint: disable=invalid-name
-    HDFS = "hdfs"
-    HTTP = "http"
-    S3 = "s3"
-    S3_HTTP = "s3-http"
-
-
-class FilesInputSpecInputType(Enum):
-    """Valid files-type input spec inputType values."""
-
-    CDX = "cdx"
-    WARC = "warc"
-
-
-FilenameExtension = str
-MimeType = str
-
-
-class FilesInputSpec(InputSpecBase):
-    """Represents an ARCH files-type collection input spec."""
-
-    type: Literal["files"] = "files"
-    # Accept any string for dataSource in order to support additional
-    # type support through plugins.
-    dataSource: FilesInputSpecDataSource | str
-    dataLocation: str
-    dataMime: dict[FilenameExtension, MimeType]
-    inputType: Optional[FilesInputSpecInputType]
-
-    class Config:
-        """Pydantic model config."""
-
-        use_enum_values = True
-
-    @classmethod
-    def get_collection_configuration_pairs(cls, collection: Collection):
-        """If collection.metadata.input_spec validates against this schema
-        and the input spec specifies dataMime, return a [<label>, <values>]
-        pair.
-        """
-        try:
-            spec = cls(**(collection.metadata or {}).get("input_spec", {}))
-        except ValidationError:
-            return None
-        if spec.dataMime:
-            return [["MIME Type(s)", list(spec.dataMime.values())]]
-        return None
-
-    @property
-    def is_warc_type(self):
-        """Return whether this input spec is a WARC type."""
-        return self.inputType in (
-            FilesInputSpecInputType.CDX,
-            FilesInputSpecInputType.WARC,
-        )
-
-
-# Dynamically load any custom input spec classes defined by plugins.
-# Note that plugins must define this as a static attribute of the
-# corresponding PluginAppConfig class, e.g.
-#
-#   class ExampleConfig(keystone.plugins.PluginAppConfig):
-#       name = "example_plugin"
-#       custom_input_spec_classes = (<someClass>,)
-#
-InputSpec = Annotated[
-    Union[
-        (
-            LegacyCollectionInputSpec,
-            CDXDatasetInputSpec,
-            FilesInputSpec,
-        )
-        + tuple(
-            *chain(
-                getattr(app, "custom_input_spec_classes", ())
-                for app in get_plugin_apps()
-            )
-        )
-    ],
-    Field(discriminator="type"),
-]
-
-
-MULTI_INPUT_SPEC_TYPE = "multi-specs"
-
-
-class MultiInputSpec(StrictSchema):
-    """Represents a collection of multiple input specs."""
-
-    type: Literal[MULTI_INPUT_SPEC_TYPE] = MULTI_INPUT_SPEC_TYPE
-    specs: List[InputSpec]
-
-    @property
-    def is_warc_type(self):
-        """Return whether this input spec is a WARC type."""
-        return any(spec.is_warc_type for spec in self.specs)
-
-
-###############################################################################
-# Public API Schemas
-###############################################################################
-
-
-class CollectionMetadataBase(StrictSchema):
-    """Represents common collection metadata."""
-
-    object_count: Optional[int]
-    object_name_singular: Optional[str]
-    object_name_plural: Optional[str]
+InputSpec = LegacyCollectionInputSpec | CDXDatasetInputSpec | FilesInputSpec
 
 
 class SpecialCollectionMetadata(CollectionMetadataBase):
@@ -343,16 +216,72 @@ class AITCollectionMetadata(CollectionMetadataBase):
     seed_count: int
     last_crawl_date: Optional[datetime]
 
+    @property
+    def custom_metadata_icons_template_name(self):
+        """Return the name of the custom metadata icons template."""
+        return "keystone/collection-detail-ait-metadata-icons.html"
+
 
 class CustomCollectionMetadata(CollectionMetadataBase):
-    """Represents CUSTOM collection type metadata."""
+    """Rechainpresents CUSTOM collection type metadata."""
 
     state: JobEventTypes
 
 
-CollectionMetadata = (
-    AITCollectionMetadata | CustomCollectionMetadata | SpecialCollectionMetadata
-)
+# Include any plugin-provided CollectionMetadata variants.
+CollectionMetadata = Union[
+    tuple(
+        *chain(
+            getattr(app, "collection_metadata_schemas", ()) for app in get_plugin_apps()
+        )
+    )
+    + (AITCollectionMetadata, CustomCollectionMetadata, SpecialCollectionMetadata)
+]
+
+
+def _collect_collection_metadata_input_spec_schemas():
+    """Return a list of schemas representing all defined
+    CollectionMetadata.input_spec fields, filtering out any NoneTypes
+    and handling the case where input_spec is a Union of types.
+    """
+
+    def _flatten_input_spec_union(union):
+        """Recursive version of typing.get_args() that also filters out NoneTypes."""
+        return [
+            y
+            for x in get_args(union)
+            for y in (
+                (x,) if get_origin(x) is not Union else _flatten_input_spec_union(x)
+            )
+            if y is not NoneType
+        ]
+
+    input_spec_schemas = []
+    for md_schema in get_args(CollectionMetadata):
+        if "input_spec" not in md_schema.__fields__:
+            continue
+        input_spec_schema = md_schema.__fields__["input_spec"].type_
+        if get_origin(input_spec_schema) is Union:
+            input_spec_schemas += _flatten_input_spec_union(input_spec_schema)
+        else:
+            input_spec_schemas.append(input_spec_schema)
+    return input_spec_schemas
+
+
+MULTI_INPUT_SPEC_TYPE = "multi-specs"
+
+
+class MultiInputSpec(StrictSchema):
+    """Represents a collection of multiple input specs."""
+
+    type: Literal[MULTI_INPUT_SPEC_TYPE] = MULTI_INPUT_SPEC_TYPE
+    # Pluck all defined input_spec schemas from within the CollectionMetadata Union.
+    specs: List[Union[tuple(_collect_collection_metadata_input_spec_schemas())]]
+
+    @property
+    def is_warc_type(self):
+        """Return whether this input spec is a WARC type."""
+        return any(spec.is_warc_type for spec in self.specs)
 
 
 class LatestDatasetSchema(Schema):
@@ -643,16 +572,6 @@ class DatasetGenerationRequest(Schema):
     collection_id: int
     job_type_id: str
     params: NamedEntityExtractionParameters | GlobalJobParameters
-
-
-class CdxFilterQuery(StrictSchema):
-    """Represents a CDX filter query."""
-
-    surtPrefixesOR: Optional[List[str]]
-    timestampFrom: Optional[str]
-    timestampTo: Optional[str]
-    statusPrefixesOR: Optional[List[int]]
-    mimesOR: Optional[List[str]]
 
 
 class SubCollectionCreationRequest(CdxFilterQuery):
