@@ -18,6 +18,7 @@ import styles from "./styles";
 export class ArchJsonSchemaForm<T> extends LitElement {
   @property({ type: Object }) schema!: JSONSchemaType<T>;
   @property({ type: Object }) data!: T;
+  @property({ type: Object }) dataKeyAliasMap: Record<string, string> = {};
 
   @state() propertiesOrder: Array<keyof T> = [];
 
@@ -165,6 +166,7 @@ export class ArchJsonSchemaForm<T> extends LitElement {
 
   private generateCheckboxInput(
     name: string,
+    displayName: string,
     checked: boolean
   ): TemplateResult {
     return html`<sp-switch
@@ -174,12 +176,13 @@ export class ArchJsonSchemaForm<T> extends LitElement {
       aria-describedby="${name}-description"
       @change=${(e: Event) =>
         this._updateDataValue(name, (e.target as Switch).checked as T[keyof T])}
-      >${name} ${checked ? "ON" : "OFF"}</sp-switch
+      >${displayName} ${checked ? "ON" : "OFF"}</sp-switch
     >`;
   }
 
   private _propToInput(
     name: string,
+    displayName: string,
     schema: SomeJSONSchema,
     value: T[keyof T],
     valueIndex?: number,
@@ -191,7 +194,11 @@ export class ArchJsonSchemaForm<T> extends LitElement {
     let inputHtml;
     switch (schema.type) {
       case "boolean":
-        inputHtml = this.generateCheckboxInput(name, value as boolean);
+        inputHtml = this.generateCheckboxInput(
+          name,
+          displayName,
+          value as boolean
+        );
         break;
       case "string":
         if (
@@ -275,7 +282,7 @@ export class ArchJsonSchemaForm<T> extends LitElement {
   }
 
   render() {
-    const { data, propertiesOrder, schema } = this;
+    const { data, dataKeyAliasMap, propertiesOrder, schema } = this;
 
     if (data === null || data === undefined) {
       return html``;
@@ -283,12 +290,16 @@ export class ArchJsonSchemaForm<T> extends LitElement {
 
     const availableKeys: Array<string> = [];
     const inputs = propertiesOrder.map((k: keyof T) => {
+      const name = k as string;
       // Abort if data doesn't specify this key.
-      if (!Object.prototype.hasOwnProperty.call(data, k as string)) {
-        availableKeys.push(k as string);
+      if (!Object.prototype.hasOwnProperty.call(data, name)) {
+        availableKeys.push(name);
         return;
       }
 
+      // Get any defined displayName to be displayed instead of the key itself -
+      // currently only utilized in generateCheckboxInput().
+      const displayName = dataKeyAliasMap[name] ?? name;
       const value_s = data[k] as T[keyof T];
       const propSchema = (schema.properties as JSONSchemaType<T>["properties"])[
         k
@@ -302,7 +313,7 @@ export class ArchJsonSchemaForm<T> extends LitElement {
             ${!propSchema.description
               ? html``
               : html`<em id="${k}-description">${propSchema.description}</em>`}
-            ${this._propToInput(k as string, propSchema, value_s)}
+            ${this._propToInput(name, displayName, propSchema, value_s)}
           </div>
         `;
       }
@@ -316,7 +327,8 @@ export class ArchJsonSchemaForm<T> extends LitElement {
             : html`<em>${propSchema.description}</em>`}
           ${value_s.map((value, i) =>
             this._propToInput(
-              k as string,
+              name,
+              displayName,
               propSchema.items as SomeJSONSchema,
               value as T[keyof T],
               i,

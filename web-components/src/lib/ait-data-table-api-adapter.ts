@@ -27,6 +27,19 @@ export default class API<RowT> {
     };
   }
 
+  updateNumHits(response: FilteredApiResponse<RowT>) {
+    const { count } = response;
+    const { dataTable } = this;
+    const { selectable } = dataTable.props;
+    const { search } = dataTable.state;
+    search.numHits = count;
+    if (selectable) {
+      const { selectAllCheckbox } = dataTable.refs;
+      selectAllCheckbox.numHits = count;
+    }
+    void dataTable.updatePaginator();
+  }
+
   async get(apiPath: string) {
     // Create a URL from the relative API path.
     const url = new URL(apiPath, window.location.origin);
@@ -75,16 +88,7 @@ export default class API<RowT> {
 
     // If request was not a facets query, update the dataTable hit counts.
     if (shouldUpdateNumHits) {
-      const { count } = response;
-      const dataTable = this.dataTable;
-      const { selectable } = dataTable.props;
-      const { search } = dataTable.state;
-      search.numHits = count;
-      if (selectable) {
-        const { selectAllCheckbox } = dataTable.refs;
-        selectAllCheckbox.numHits = count;
-      }
-      void dataTable.updatePaginator();
+      this.updateNumHits(response);
     }
 
     // The DataTable expects a Response-type object, for which json() will

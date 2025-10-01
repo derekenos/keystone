@@ -33,7 +33,10 @@ from django.http import (
     JsonResponse,
 )
 from ninja.errors import HttpError
-from ninja.pagination import paginate
+from ninja.pagination import (
+    LimitOffsetPagination,
+    paginate,
+)
 from ninja.parser import Parser
 from ninja.types import DictStrAny
 from ninja import (
@@ -73,6 +76,7 @@ from .helpers import (
 from .models import (
     Collection,
     CollectionTypes,
+    CollectionUserSettings,
     Dataset,
     JobCategory,
     JobComplete,
@@ -600,14 +604,38 @@ def user_can_run_job(
 ###############################################################################
 
 
+class CollectionLimitOffsetPagination(LimitOffsetPagination):
+    """Custom Collections pagination class to include opted_out_count in response."""
+
+    class Output(LimitOffsetPagination.Output):
+        """Extend the default LimitOffsetPagination.Output class with
+        opted_out_count.
+        """
+
+        items: List[CollectionSchema]
+        opted_out_count: Optional[int]
+
+    # pylint: disable-next=arguments-differ
+    def paginate_queryset(self, collections_opted_out_count, **params):
+        """Paginate the queryset."""
+        # The paginator class passes the return value of the endpoint function
+        # as the first positional argument, so list_collections() returns a
+        # ([<Collection>, ...], opted_out_count) tuple for the unpacking.
+        collections, opted_out_count = collections_opted_out_count
+        return super().paginate_queryset(collections, **params) | {
+            "opted_out_count": opted_out_count
+        }
+
+
 @public_api.get("/collections", response=List[CollectionSchema])
-@paginate
+@paginate(CollectionLimitOffsetPagination)
 def list_collections(request, filters: CollectionFilterSchema = Query(...)):
     """Retrieve a user's Collections, including in-progress and finished, but
     not cancelled or failed, Custom collections."""
+    user = request.user
     # https://stackoverflow.com/a/65613047
     datasets_count_subquery = Subquery(
-        Dataset.user_queryset(request.user)
+        Dataset.user_queryset(user)
         .filter(job_start__collection__id=OuterRef("id"), state=JobEventTypes.FINISHED)
         .order_by()
         .values("job_start__collection__id")
@@ -625,7 +653,10 @@ def list_collections(request, filters: CollectionFilterSchema = Query(...)):
         sort_latest_dataset_dir = -1 if querydict.pop("sort")[0][0] == "-" else 1
 
     queryset = filters.filter(
-        Collection.user_queryset(request.user)
+        # Include opted-out collections so that we can later calculate opted_out_count
+        # and apply the appropriate filter based on whether the opted_out=true URL param
+        # was specified.
+        Collection.user_queryset(user, include_opted_out=True)
         .exclude(
             # Need to do a NULL check first so *__in will work as expected.
             Q(metadata__state__isnull=False)
@@ -633,13 +664,25 @@ def list_collections(request, filters: CollectionFilterSchema = Query(...)):
         )
         .annotate(dataset_count=Coalesce(datasets_count_subquery, 0))
     )
+
+    # Get the opted-out count and apply the filter.
+    # Doing this manually here instead of in CollectionFilterSchema because the latter
+    # was a pain given the need for user access.
+    user_opt_out_exists_filter = CollectionUserSettings.user_opt_out_exists_filter(user)
+    if request.GET.get("opted_out") in ("true", "1"):
+        opted_out_count = None
+        queryset = queryset.filter(user_opt_out_exists_filter)
+    else:
+        opted_out_count = queryset.filter(user_opt_out_exists_filter).count()
+        queryset = queryset.filter(~user_opt_out_exists_filter)
+
     collections = list(
         apply_sort_param(querydict.get("sort"), queryset, CollectionSchema)
     )
 
     # Set latest_dataset.
     ordered_datasets = list(
-        Dataset.user_queryset(request.user)
+        Dataset.user_queryset(user)
         .prefetch_related("job_start")
         .prefetch_related("job_start__job_type")
         .prefetch_related("job_start__collection")
@@ -662,7 +705,9 @@ def list_collections(request, filters: CollectionFilterSchema = Query(...)):
             reverse=sort_latest_dataset_dir == -1,
         )
 
-    return collections
+    # See CollectionLimitOffsetPagination.paginate_queryset() for an explanation
+    # as to why we're returning a tuple here.
+    return collections, opted_out_count
 
 
 @public_api.get("/collections/filter_values", response=List[Any])
@@ -931,12 +976,29 @@ def update_collection(request, payload: UpdateCollectionSchema, collection_id: i
     """Update an existing Collection."""
     req_user = request.user
     collection = Collection.objects.get(id=collection_id)
-    # Enforce permissions.
+    payload_d = payload.dict(exclude_none=True)
+    # Pop any specified user_settings for separate handling.
+    user_settings = payload_d.pop("user_settings", None)
+    if user_settings:
+        # User only needs VIEW perms to modify user settings.
+        if not req_user.has_perm(Permissions.VIEW_COLLECTION, collection):
+            raise PermissionDenied
+        CollectionUserSettings.objects.update_or_create(
+            collection=collection,
+            user=req_user,
+            defaults=user_settings,
+        )
+    # Return if no collection instance attributes are to be updated.
+    if not payload_d:
+        return collection
+    # Enforce collection change permissions.
     if not req_user.has_perm(Permissions.CHANGE_COLLECTION, collection):
         raise PermissionDenied
-    for k, v in payload.dict().items():
+    # Update instance fields.
+    for k, v in payload_d.items():
         setattr(collection, k, v)
     collection.save()
+
     return collection
 
 

@@ -62,6 +62,15 @@ export type Collection = {
   metadata: CollectionMetadata;
 };
 
+export interface CollectionSettings {
+  opt_out: boolean;
+}
+
+export interface CollectionUpdate {
+  name?: string;
+  user_settings?: CollectionSettings;
+}
+
 export type CollectionIdNamePairs = Array<
   [Collection["id"], Collection["name"]]
 >;
@@ -275,6 +284,10 @@ type DistinctApiResults<T> = Array<T[keyof T]>;
 export type FilteredApiResponse<T> = BaseFilteredApiResponse<
   FilteredApiResults<T>
 >;
+
+export type CollectionFilteredApiResponse = FilteredApiResponse<Collection> & {
+  opted_out_count?: number | null;
+};
 
 export type DistinctApiResponse<T> = BaseFilteredApiResponse<
   DistinctApiResults<T>

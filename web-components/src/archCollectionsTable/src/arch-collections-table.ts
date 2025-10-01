@@ -1,12 +1,14 @@
 import { PropertyValues } from "lit";
-import { customElement } from "lit/decorators.js";
+import { customElement, property } from "lit/decorators.js";
 
 import { ArchDataTable } from "../../archDataTable/index";
+import API from "../../lib/ait-data-table-api-adapter";
 import { CollectionTypeDisplayMap } from "../../lib/constants";
 import {
   Collection,
   CollectionType,
   CustomCollectionMetadata,
+  CollectionFilteredApiResponse,
   SpecialCollectionMetadata,
   ProcessingState,
   ValueOf,
@@ -22,9 +24,50 @@ import {
 } from "../../lib/helpers";
 import Styles from "./styles";
 
+class CollectionsTableAPI extends API<Collection> {
+  updateNumHits(response: CollectionFilteredApiResponse) {
+    /*
+     * Override default API adapter to display the num hidden count.
+     */
+    super.updateNumHits(response);
+    const { opted_out_count: hiddenCount } = response;
+    if (
+      hiddenCount === undefined ||
+      hiddenCount === null ||
+      hiddenCount === 0
+    ) {
+      return;
+    }
+    const { dataTable } = this;
+    const el = (
+      dataTable?.querySelector("div.paginator-wrapper") as HTMLElement
+    ).children[0] as HTMLElement;
+    const textContent = el.textContent as string;
+    const hiddenCollectionsUrl = new URL(window.location.href);
+    hiddenCollectionsUrl.pathname = "/hidden-collections";
+    const title =
+      "View the " +
+      (hiddenCount === 1
+        ? "hidden collection that matches"
+        : `${hiddenCount} hidden collections that match`) +
+      " this search";
+    el.innerHTML = `${textContent.slice(0, textContent.length - 1)}, <a href="${
+      hiddenCollectionsUrl.href
+    }" target="_blank" title="${title}" style="font-size: 0.75em; color: #664d03; text-decoration: underline; cursor: pointer;">${hiddenCount} hidden</a>)`;
+  }
+}
+
 @customElement("arch-collections-table")
 export class ArchCollectionsTable extends ArchDataTable<Collection> {
+  @property({ type: Boolean, attribute: "show-hidden" }) showHidden = false;
+
   static styles = [...ArchDataTable.styles, ...Styles];
+
+  constructor() {
+    // Use ArchCollectionsTable-specific API adapter class.
+    super();
+    this.apiFactory = CollectionsTableAPI;
+  }
 
   static renderNameCell(
     name: ValueOf<Collection>,
@@ -82,18 +125,29 @@ export class ArchCollectionsTable extends ArchDataTable<Collection> {
   willUpdate(_changedProperties: PropertyValues) {
     super.willUpdate(_changedProperties);
 
-    this.actionButtonLabels = ["Generate Dataset", "Create Custom Collection"];
-    this.actionButtonSignals = [
-      Topics.GENERATE_DATASET,
-      Topics.CREATE_SUB_COLLECTION,
-    ];
-    this.actionButtonDisabledTitles = [
-      "Select a single collection below to generate a dataset",
-      "Select one or more of the Archive-It, Custom, or Special-type collections below to create a custom collection",
-    ];
+    const { showHidden } = this;
+
+    if (!showHidden) {
+      this.actionButtonLabels = [
+        "Generate Dataset",
+        "Create Custom Collection",
+      ];
+      this.actionButtonSignals = [
+        Topics.GENERATE_DATASET,
+        Topics.CREATE_SUB_COLLECTION,
+      ];
+      this.actionButtonDisabledTitles = [
+        "Select a single collection below to generate a dataset",
+        "Select one or more of the Archive-It, Custom, or Special-type collections below to create a custom collection",
+      ];
+    }
     this.apiCollectionEndpoint = "/collections";
     this.apiItemResponseIsArray = true;
     this.apiItemTemplate = "/collections?id=:id";
+    // Maybe show only hidden collections.
+    if (showHidden) {
+      this.apiStaticParamPairs = [["opted_out", "true"]];
+    }
     this.itemPollPredicate = (item) =>
       item.collection_type === CollectionType.CUSTOM
         ? isActiveProcessingState(
@@ -141,7 +195,7 @@ export class ArchCollectionsTable extends ArchDataTable<Collection> {
       const metadata = row.metadata as CustomCollectionMetadata;
       return metadata?.state && isActiveProcessingState(metadata.state);
     };
-    this.selectable = true;
+    this.selectable = !showHidden;
     this.sort = "-id";
     this.sortableColumns = [true, true, false, true, true];
     this.filterableColumns = [false, true];

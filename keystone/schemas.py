@@ -30,6 +30,7 @@ from .plugin_available_schemas import (
     StrictSchema,
 )
 from .models import (
+    CollectionUserSettings,
     JobStart,
     JobEvent,
     JobEventTypes,
@@ -292,6 +293,18 @@ class LatestDatasetSchema(Schema):
     start_time: datetime
 
 
+class EmbeddedCollectionUserSettingsSchema(ModelSchema):
+    """Represents a CollectionUserSettings"""
+
+    class Config:
+        """Ninja ModelSchema configuration."""
+
+        model = CollectionUserSettings
+        model_fields = [
+            "opt_out",
+        ]
+
+
 class CollectionSchema(Schema):
     """Represents a Keystone Collection"""
 
@@ -302,12 +315,19 @@ class CollectionSchema(Schema):
     dataset_count: int = 0
     latest_dataset: LatestDatasetSchema = None
     metadata: Optional[CollectionMetadata] = None
+    user_settings: Optional[EmbeddedCollectionUserSettingsSchema] = None
+
+    @staticmethod
+    def resolve_user_settings(obj):
+        """Return the first of any defined usersettings_set instance."""
+        return obj.usersettings_set.first()
 
 
 class UpdateCollectionSchema(Schema):
     """Existing Collection update schema"""
 
-    name: str
+    name: Optional[str]
+    user_settings: Optional[EmbeddedCollectionUserSettingsSchema]
 
     class Config:
         """Reject requests that specify additional fields."""

@@ -14,6 +14,7 @@ const CHUNK_FILENAME_PREFIX = "chunk-";
 
 export default {
   input: [
+    "./src/archAlert/src/arch-alert.ts",
     "./src/archCollectionDetailsDatasetTable/src/arch-collection-details-dataset-table.ts",
     "./src/archCollectionsCard/src/arch-collections-card.ts",
     "./src/archCollectionsTable/src/arch-collections-table.ts",
@@ -25,6 +26,7 @@ export default {
     "./src/archEditUserModal/src/arch-edit-user-modal.ts",
     "./src/archGenerateDatasetForm/src/arch-generate-dataset-form.ts",
     "./src/archGlobalModal/src/arch-global-modal.ts",
+    "./src/archCollectionSettingsButton/src/arch-collection-settings-button.ts",
     "./src/archHoverTooltip/src/arch-hover-tooltip.ts",
     "./src/archLoadingIndicator/src/arch-loading-indicator.ts",
     "./src/archRecentDatasetsCard/src/arch-recent-datasets-card.ts",

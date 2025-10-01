@@ -14,7 +14,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.db import transaction
 from django.db import IntegrityError
-from django.db.models import F, Q
+from django.db.models import Exists, F, Q, OuterRef, Prefetch
 from django.db.models.functions import Lower
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -250,11 +250,34 @@ class Collection(models.Model):
         return super().save(*args, **kwargs)
 
     @classmethod
-    def user_queryset(cls, user):
-        """Return a queryset comprising all Collections the user has access to."""
-        return Collection.objects.filter(
-            Q(users=user) | Q(accounts__user=user) | Q(teams__members=user)
-        ).distinct()
+    def user_queryset(cls, user, include_opted_out=False):
+        """Return a queryset comprising all Collections the user has access to.
+        If include_opted_out is specified, also include collections for which the
+        user has previously opted-out."""
+        return (
+            Collection.objects.filter(
+                Q(users=user) | Q(accounts__user=user) | Q(teams__members=user)
+            )
+            # Prefetch any CollectionUserSettings instances for this collection/user.
+            # Apply order_by so that using usersettings_set.first() to retrieve any single
+            # existing instance will hit the prefetch cache instead of issuing a new query.
+            .prefetch_related(
+                Prefetch(
+                    "usersettings_set",
+                    queryset=CollectionUserSettings.objects.filter(user=user).order_by(
+                        "id"
+                    ),
+                )
+            )
+            .filter(
+                *(
+                    ()
+                    if include_opted_out
+                    else (~CollectionUserSettings.user_opt_out_exists_filter(user),)
+                ),
+            )
+            .distinct()
+        )
 
     @classmethod
     def handle_job_event(cls, job_event):
@@ -353,21 +376,63 @@ class Collection(models.Model):
         """
         match perm:
             case Permissions.VIEW_COLLECTION:
-                # View permissions are dictated by user_queryset().
-                return self.user_queryset(user).filter(id=self.id).exists()
+                # View permissions are dictated by user_queryset(). We'll additionally request
+                # opted-out collections because these remain directly viewable by otherwise
+                # authorized users.
+                return (
+                    self.user_queryset(user, include_opted_out=True)
+                    .filter(id=self.id)
+                    .exists()
+                )
             case Permissions.CHANGE_COLLECTION:
-                # Users are currently only allowed to modify custom collections
-                # of which they are the creator (i.e. associated JobStart user).
-                return JobStart.objects.filter(
-                    collection=self,
-                    job_type__id=settings.KnownArchJobUuids.USER_DEFINED_QUERY,
-                    user_id=user.id,
-                ).exists()
+                # Users are currently only allowed to modify non-opted-out custom
+                # collections of which they are the creator (i.e. associated JobStart user)
+                return (
+                    JobStart.objects.filter(
+                        collection=self,
+                        job_type__id=settings.KnownArchJobUuids.USER_DEFINED_QUERY,
+                        user_id=user.id,
+                    )
+                    .exclude(
+                        CollectionUserSettings.user_opt_out_exists_filter(
+                            user, "collection"
+                        )
+                    )
+                    .exists()
+                )
             case _:
                 return False
 
     def __str__(self):
         return self.name
+
+
+class CollectionUserSettings(models.Model):
+    """Collection-specific user settings."""
+
+    collection = models.ForeignKey(
+        Collection, on_delete=models.PROTECT, related_name="usersettings_set"
+    )
+    user = models.ForeignKey(User, on_delete=models.PROTECT)
+    opt_out = models.BooleanField(default=False, blank=True)
+
+    @classmethod
+    def user_opt_out_exists_filter(cls, user, collection_path="pk"):
+        """Return an Exists() clause that checks for whether the specified user
+        has an opt_out=True setting for the referenced collection.
+        """
+        return Exists(
+            cls.objects.filter(
+                collection=OuterRef(collection_path), user=user, opt_out=True
+            )
+        )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("collection", "user"), name="collectionusersettings_unique"
+            )
+        ]
 
 
 class ArchQuota(models.Model):
@@ -619,13 +684,18 @@ class Dataset(models.Model):
         #    which the team is authorized to access the dataset
         #  - owned by the global datasets user and is associated with a
         #    collection to which the user has access
+        #  AND of which the associated collection the user has not opted out
         return Dataset.objects.filter(
             Q(job_start__user=user)
             | (Q(teams=F("job_start__user__teams")) & Q(teams__members=user))
             | (
                 Q(job_start__user__username=settings.GLOBAL_USER_USERNAME)
                 & Q(job_start__collection__users=user)
-            )
+            ),
+            ~CollectionUserSettings.user_opt_out_exists_filter(
+                user,
+                collection_path="job_start__collection",
+            ),
         ).distinct()
 
     @classmethod

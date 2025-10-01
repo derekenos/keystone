@@ -1,0 +1,35 @@
+{% set breadcrumbs = (("Hidden Collections", "hidden_collections"),) %}
+{% extends 'keystone/base.html' %}
+
+{% block header_title %}
+Hidden Collections
+{% endblock %}
+
+{% block head_extra %}
+  <script src="{{ static('/js/arch-collections-table.js') }}" type="module"></script>
+  <script src="{{ static('/js/arch-alert.js') }}" type="module"></script>
+
+  <style>
+   arch-alert {
+     display: block;
+     margin-top: 1rem;
+   }
+
+   .card-container > arch-collections-table {
+     margin-top: 0;
+   }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <arch-alert
+    alert-class="info"
+    message="You are viewing your hidden collections. Click each collection's &quot;Settings&quot; button to toggle the &quot;Hide&quot; option OFF to return it to your main collections table."
+    non-dismissable
+  ></arch-alert>
+  <div class="card-container">
+    <arch-collections-table show-hidden></arch-collections-table>
+  </div>
+</div>
+{% endblock %}
