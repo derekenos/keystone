@@ -435,12 +435,13 @@ class JobType(models.Model):
     def get_user_runnable(cls):
         """Return a queryset of runnable, non-deprecated JobTypes."""
         return cls.objects.filter(can_run=True).exclude(
-            id__in=(
-                settings.KnownArchJobUuids.NAMED_ENTITIES,
-                settings.KnownArchJobUuids.ARCHIVESPARK_ENTITY_EXTRACTION_CHINESE,
-                settings.KnownArchJobUuids.ARCHIVESPARK_FLEX_JOB,
-                settings.KnownArchJobUuids.ARCHIVESPARK_NOOP,
+            Q(
+                id__in=(
+                    settings.KnownArchJobUuids.NAMED_ENTITIES,
+                    settings.KnownArchJobUuids.ARCHIVESPARK_ENTITY_EXTRACTION_CHINESE,
+                )
             )
+            | Q(category__name="")
         )
 
     def __str__(self):
