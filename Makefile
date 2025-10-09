@@ -99,7 +99,7 @@ arch-shared:
 	mkdir arch-shared/out/datasets;
 
 dev/arch:
-	git clone --branch=2.2.0 git@github.com:internetarchive/arch dev/arch
+	git clone --branch=2.2.1 git@github.com:internetarchive/arch dev/arch
 
 .PHONY: build-images
 build-images: .env dev/arch arch-shared
