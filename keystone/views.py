@@ -32,11 +32,8 @@ from .models import (
     UserRoles,
 )
 from .permissions import Permissions
-from .plugins import get_plugin_apps
-from .schemas import (
-    MULTI_INPUT_SPEC_TYPE,
-    FilesInputSpec,
-)
+from .schemas import MULTI_INPUT_SPEC_TYPE
+from .validators import validate_collection_metadata
 from .solr import SolrClient
 
 
@@ -266,19 +263,16 @@ def get_custom_collection_configuration_info(collection):
 def get_special_collection_configuration_info(collection):
     """Return a configuration info dict comprising the special collections's
     configuration parameters, or None if no such configuration exists."""
-    # First check whether any plugin-provided custom input spec class that validates
-    # against any defined collection.metadata.input_spec defines a
-    # get_collection_configuration_pairs() method that returns anything.
-    for app in get_plugin_apps():
-        for input_spec_cls in getattr(app, "custom_input_spec_classes", ()):
-            if not hasattr(input_spec_cls, "get_collection_configuration_pairs"):
-                continue
-            pairs = input_spec_cls.get_collection_configuration_pairs(collection)
-            if pairs is not None:
-                return {"param_label_value_pairs": pairs}
-    # No plugin-provided pairs found, so fall back to the default
-    # FilesInputSpec.get_collection_configuration_pairs().
-    pairs = FilesInputSpec.get_collection_configuration_pairs(collection)
+    if not collection.metadata:
+        return None
+    input_spec = validate_collection_metadata(
+        collection.metadata, collection
+    ).input_spec
+    if not input_spec:
+        return None
+    if not hasattr(input_spec, "get_collection_configuration_pairs"):
+        return None
+    pairs = input_spec.get_collection_configuration_pairs()
     return None if not pairs else {"param_label_value_pairs": pairs}
 
 
@@ -290,6 +284,11 @@ def collection_detail(request, collection_id):
     )
     # Ensure that the collection's metadata is up-to-date.
     collection.refresh_metadata()
+    # Get the validated metadata object and any custom icons template name.
+    validated_metadata = validate_collection_metadata(collection.metadata, collection)
+    custom_metadata_icons_template = getattr(
+        validated_metadata, "custom_metadata_icons_template_name", None
+    )
     if collection.collection_type == CollectionTypes.CUSTOM:
         configuration_info = get_custom_collection_configuration_info(collection)
     elif collection.collection_type == CollectionTypes.SPECIAL:
@@ -302,6 +301,7 @@ def collection_detail(request, collection_id):
         context={
             "collection": collection,
             "configuration_info": configuration_info,
+            "custom_metadata_icons_template": custom_metadata_icons_template,
             "Permissions": Permissions,
         },
     )
