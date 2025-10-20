@@ -81,7 +81,7 @@ export class ArchSubCollectionBuilderSubmitButton extends LitElement {
             });
 
     return html`
-      <arch-modal title="Review Your Custom Collection" modalSize="l">
+      <arch-modal modalTitle="Review Your Custom Collection" modalSize="l">
         <div slot="content">
           ${data === undefined
             ? html``

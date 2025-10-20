@@ -4,10 +4,18 @@ export * from "./webservices/src/lib/styles";
 import {
   linkColor,
   linkHoverColor,
+  dangerButtonBgColor,
+  dangerButtonFgColor,
+  dangerButtonHoverBgColor,
+  dangerButtonHoverBorderColor,
   defaultButtonBgColor,
   defaultButtonFgColor,
+  defaultButtonHoverBgColor,
+  defaultButtonHoverFgColor,
   primaryButtonBgColor,
   primaryButtonFgColor,
+  primaryButtonHoverBgColor,
+  primaryButtonHoverFgColor,
   successButtonBgColor,
   successButtonFgColor,
 } from "./webservices/src/lib/styles";
@@ -80,6 +88,11 @@ export const global = css`
     color: ${defaultButtonFgColor};
   }
 
+  button:hover {
+    background-color: ${defaultButtonHoverBgColor};
+    color: ${defaultButtonHoverFgColor};
+  }
+
   button:disabled,
   input:disabled,
   select:disabled {
@@ -91,14 +104,24 @@ export const global = css`
     color: ${primaryButtonFgColor};
   }
 
+  button.primary:hover {
+    background-color: ${primaryButtonHoverBgColor};
+    color: ${primaryButtonHoverFgColor};
+  }
+
   button.success {
     background-color: ${successButtonBgColor};
     color: ${successButtonFgColor};
   }
 
   button.danger {
-    background-color: ${bsDangerBgSubtle};
-    color: ${bsDangerTextEmphasis};
+    color: ${dangerButtonFgColor};
+    background-color: ${dangerButtonBgColor};
+  }
+
+  button.danger:hover {
+    background-color: ${dangerButtonHoverBgColor};
+    border-color: ${dangerButtonHoverBorderColor};
   }
 
   a:any-link:hover,

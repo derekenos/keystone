@@ -1288,6 +1288,19 @@ def generate_dataset(request, payload: DatasetGenerationRequest):
     )
 
 
+@public_api.post(
+    "/datasets/{dataset_id}/cancel", response={HTTPStatus.NO_CONTENT: None}
+)
+def cancel_dataset(request, dataset_id: int):
+    """Cancel an active Dataset job"""
+    dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
+    # Allow any authorized publishers to unpublish.
+    if not request.user.has_perm(Permissions.CANCEL_DATASET, dataset):
+        raise PermissionDenied
+    ArchAPI.cancel_job(request.user, dataset.job_start.id)
+    return HTTPStatus.NO_CONTENT, None
+
+
 @public_api.get("/datasets/{dataset_id}/publication", response=DatasetPublicationInfo)
 def dataset_published_status(request, dataset_id: int):
     """Retrieve publication info for the specified Dataset"""

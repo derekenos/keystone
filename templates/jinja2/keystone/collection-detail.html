@@ -221,6 +221,7 @@
           <div id="datasets-table-wrapper">
             <arch-collection-details-dataset-table
               collectionId="{{ collection.id }}"
+              cancel-job-icon-url="{{ static('/img/circle-stop-solid-full.svg') }}"
               {{ "is-opted-out-collection" if user_settings.opt_out else "" }}
               {{ "" if can_generate_dataset else "hide-generate-dataset" }}
             >

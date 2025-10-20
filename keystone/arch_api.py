@@ -316,6 +316,16 @@ class ArchAPI:
         )
 
     @classmethod
+    def cancel_job(cls, user, job_id):
+        """Cancel an in-progress Dataset job."""
+        return cls.post(
+            user=user,
+            path=f"/job/{job_id}/stop",
+            data=None,
+            expect_response_body=False,
+        )
+
+    @classmethod
     def create_sub_collection(cls, user, input_spec, job_params):
         """Create a custom sub-collection."""
         return cls.run_job(

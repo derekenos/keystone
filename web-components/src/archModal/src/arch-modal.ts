@@ -35,7 +35,7 @@ export class ArchModal extends ModalMixin(LitElement) {
   @property({ type: String }) cancelButtonText = "Cancel";
   @property({ type: String }) submitButtonClass = "primary";
   @property({ type: String }) submitButtonText = "Confirm";
-  @property({ type: String }) title = "";
+  @property({ type: String }) modalTitle = "";
   @property() content: TemplateResult = html``;
 
   static styles = styles;
@@ -49,10 +49,10 @@ export class ArchModal extends ModalMixin(LitElement) {
       hideSubmitButton,
       submitButtonClass,
       submitButtonText,
-      title,
+      modalTitle,
     } = this;
     return html`
-      <h2 slot="heading">${title}</h2>
+      <h2 slot="heading">${modalTitle}</h2>
       <slot name="content">${content}</slot>
       <slot name="buttons">
         <div class="buttons-wrapper">

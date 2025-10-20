@@ -140,6 +140,12 @@ export default class ArchAPI {
           params
         ),
 
+      cancel: (datasetId: Dataset["id"]) =>
+        ArchAPI.jsonRequest<undefined, null>(
+          "POST",
+          `/datasets/${datasetId}/cancel`
+        ),
+
       updateTeams: (datasetId: Dataset["id"], teams: Array<Team>) =>
         ArchAPI.jsonRequest<Array<Team>, null>(
           "POST",

@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, html, nothing } from "lit";
 
 import { SomeJSONSchema } from "ajv/lib/types/json-schema";
 import { customElement, property, query, state } from "lit/decorators.js";
@@ -10,7 +10,13 @@ import {
   ProcessingState,
 } from "../../lib/types";
 
-import { Paths, isoStringToDateString } from "../../lib/helpers";
+import {
+  Paths,
+  isActiveProcessingState,
+  isoStringToDateString,
+} from "../../lib/helpers";
+
+import "../../archCancelJobButton/index";
 
 import { ArchJobButton } from "./arch-job-button";
 import "./arch-job-button";
@@ -160,8 +166,19 @@ export class ArchJobCard extends LitElement {
               .jobStateTuples=${stateTuples}
               .jobParameters=${jobParameters}
               @submit=${this.emitGenerateDataset.bind(this)}
+              style="display: inline-block;"
             >
             </arch-job-button>
+            ${!stateTuples || !isActiveProcessingState(stateTuples[0][2])
+              ? nothing
+              : html`
+                  <arch-cancel-job-button
+                    .datasetId=${stateTuples[0][0]}
+                    .jobName=${job.name}
+                    .collectionName=${collectionName}
+                    style="vertical-align: bottom;"
+                  ></arch-cancel-job-button>
+                `}
           `}
     </div>`;
   }

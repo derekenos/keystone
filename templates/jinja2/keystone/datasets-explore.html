@@ -35,6 +35,7 @@ Datasets
 <div class="row">
   <div class="large-12 columns" id="data-table-container">
     <arch-dataset-explorer-table
+      cancel-job-icon-url="{{ static('/img/circle-stop-solid-full.svg') }}"
       {{ "" if can_generate_dataset else "hide-generate-dataset" }}
     ></arch-dataset-explorer-table>
   </div>

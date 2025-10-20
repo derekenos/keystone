@@ -47,7 +47,7 @@ export class ArchCreateNewUserModal extends ArchModal {
     super.connectedCallback();
     this.scrollable = true;
     this.modalSize = "m";
-    this.title = "Create a New User";
+    this.modalTitle = "Create a New User";
     this.submitButtonText = "Create";
     this.renderContent();
     this.addEventListener("sp-closed", this.onCloseHandler.bind(this));

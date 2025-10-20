@@ -2,8 +2,14 @@ import { css } from "lit";
 
 export const linkColor = css`#2b74a1`;
 export const linkHoverColor = css`#1b4865`;
+export const dangerButtonBgColor = css`#dc3545`;
+export const dangerButtonFgColor = css`#fff`;
+export const dangerButtonHoverBgColor = css`#bb2d3b`;
+export const dangerButtonHoverBorderColor = css`#b02a37`;
 export const defaultButtonBgColor = css`#f0f0f0`;
 export const defaultButtonFgColor = css`#222`;
+export const defaultButtonHoverBgColor = css`#ddd`;
+export const defaultButtonHoverFgColor = css`#111`;
 export const primaryButtonBgColor = linkColor;
 export const primaryButtonFgColor = css`#fff`;
 export const primaryButtonHoverBgColor = linkHoverColor;

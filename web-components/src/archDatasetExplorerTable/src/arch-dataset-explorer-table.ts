@@ -10,6 +10,8 @@ import {
   isActiveProcessingState,
   isoStringToDateString,
 } from "../../lib/helpers";
+import "../../archCancelJobButton/index";
+
 import Styles from "./styles";
 
 @customElement("arch-dataset-explorer-table")
@@ -17,6 +19,8 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
   @property({ type: Boolean, attribute: "show-hidden" }) showHidden = false;
   @property({ type: Boolean, attribute: "hide-generate-dataset" })
   hideGenerateDataset = false;
+  @property({ type: String, attribute: "cancel-job-icon-url" })
+  cancelJobIconUrl!: string;
 
   @state() columnNameHeaderTooltipMap = {
     category:
@@ -86,6 +90,28 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
         });
   }
 
+  renderStateCell(
+    state: ValueOf<Dataset>,
+    dataset: Dataset
+  ): string | HTMLElement {
+    const { cancelJobIconUrl } = this;
+    const displayState = EventTypeDisplayMap[state as Dataset["state"]];
+    return !isActiveProcessingState(dataset.state)
+      ? displayState
+      : createElement("div", {
+          children: [
+            displayState,
+            createElement("arch-cancel-job-button", {
+              datasetId: dataset.id,
+              jobName: dataset.name,
+              collectionName: dataset.collection_name,
+              iconStyleButtonUrl: cancelJobIconUrl,
+              style: "vertical-align: middle; margin: 0 0 0.2em 0.5em;",
+            }),
+          ],
+        });
+  }
+
   willUpdate(_changedProperties: PropertyValues) {
     super.willUpdate(_changedProperties);
 
@@ -110,7 +136,7 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
       (isSample) =>
         BoolDisplayMap[(isSample as Dataset["is_sample"]).toString()],
 
-      (state) => EventTypeDisplayMap[state as Dataset["state"]],
+      this.renderStateCell.bind(this),
 
       (startTime) => isoStringToDateString(startTime as Dataset["start_time"]),
 
@@ -149,10 +175,12 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
         ? ["You have no hidden datasets."]
         : [
             "No datasets have been generated. ",
-            createElement("a", {
-              href: "/datasets/generate",
-              textContent: "Generate a new dataset",
-            }),
+            hideGenerateDataset
+              ? ""
+              : createElement("a", {
+                  href: "/datasets/generate",
+                  textContent: "Generate a new dataset",
+                }),
           ],
     });
     this.searchColumns = ["name", "category_name", "collection_name", "state"];
