@@ -282,8 +282,8 @@ class Collection(models.Model):
         from .schemas import (
             LegacyCollectionInputSpec,
             CDXDatasetInputSpec,
-            SpecialCollectionMetadata,
         )
+        from .validators import validate_collection_metadata
 
         if self.collection_type in (CollectionTypes.AIT, CollectionTypes.SPECIAL):
             # Return any explicitly-defined input spec for SPECIAL-type collections.
@@ -293,7 +293,7 @@ class Collection(models.Model):
                 and "input_spec" in self.metadata
                 and self.metadata["input_spec"]
             ):
-                return SpecialCollectionMetadata(**self.metadata).input_spec
+                return validate_collection_metadata(self.metadata, self).input_spec
             # Return a legacy collection-type input spec for AIT and SPECIAL collections.
             return LegacyCollectionInputSpec(collectionId=self.arch_id)
         # Handle CUSTOM collections.
