@@ -2,11 +2,12 @@ import { identity } from "./helpers";
 import {
   ApiParams,
   Collection,
-  CollectionFilteredApiResponse,
   CollectionIdNamePairs,
   CollectionSettings,
   CollectionUpdate,
   Dataset,
+  DatasetSettings,
+  DatasetUpdate,
   FilteredApiResponse,
   JobId,
   JobParameters,
@@ -91,7 +92,7 @@ export default class ArchAPI {
   static get collections() {
     return {
       get: (params: ApiParams<Collection> = []) =>
-        ArchAPI.jsonRequest<Collection, CollectionFilteredApiResponse>(
+        ArchAPI.jsonRequest<Collection, FilteredApiResponse<Collection>>(
           "GET",
           "/collections",
           params
@@ -145,6 +146,17 @@ export default class ArchAPI {
           `/datasets/${datasetId}/teams`,
           undefined,
           teams
+        ),
+
+      updateUserSettings: (
+        datasetId: Dataset["id"],
+        settings: DatasetSettings
+      ) =>
+        ArchAPI.jsonRequest<DatasetUpdate, null>(
+          "PATCH",
+          `/datasets/${datasetId}`,
+          undefined,
+          { user_settings: settings }
         ),
 
       publication: {

@@ -78,6 +78,7 @@ from .models import (
     CollectionTypes,
     CollectionUserSettings,
     Dataset,
+    DatasetUserSettings,
     JobCategory,
     JobComplete,
     JobEvent,
@@ -116,6 +117,7 @@ from .schemas import (
     TeamFilterSchema,
     TeamSchema,
     UpdateCollectionSchema,
+    UpdateDatasetSchema,
     UpdateTeamSchema,
     UpdateUserSchema,
     UserFilterSchema,
@@ -770,12 +772,39 @@ def collection_dataset_states(request, collection_id: int):
     return d
 
 
+class DatasetLimitOffsetPagination(LimitOffsetPagination):
+    """Custom Datasets pagination class to include opted_out_count in response."""
+
+    class Output(LimitOffsetPagination.Output):
+        """Extend the default LimitOffsetPagination.Output class with
+        opted_out_count.
+        """
+
+        items: List[DatasetSchema]
+        opted_out_count: Optional[int]
+
+    # pylint: disable-next=arguments-differ
+    def paginate_queryset(self, datasets_opted_out_count, **params):
+        """Paginate the queryset."""
+        # The paginator class passes the return value of the endpoint function
+        # as the first positional argument, so list_datasets() returns a
+        # ([<Dataset>, ...], opted_out_count) tuple for the unpacking.
+        datasets, opted_out_count = datasets_opted_out_count
+        return super().paginate_queryset(datasets, **params) | {
+            "opted_out_count": opted_out_count
+        }
+
+
 @public_api.get("/datasets", response=List[DatasetSchema])
-@paginate
+@paginate(DatasetLimitOffsetPagination)
 def list_datasets(request, filters: DatasetFilterSchema = Query(...)):
     """Retrieve the list of Datasets"""
+    user = request.user
     queryset = filters.filter(
-        Dataset.user_queryset(request.user)
+        # Include opted-out collections so that we can later calculate opted_out_count
+        # and apply the appropriate filter based on whether the opted_out=true URL param
+        # was specified.
+        Dataset.user_queryset(user, include_opted_out=True)
         .prefetch_related("job_start")
         .prefetch_related("job_start__job_type")
         .prefetch_related("job_start__job_type__category")
@@ -790,13 +819,28 @@ def list_datasets(request, filters: DatasetFilterSchema = Query(...)):
         )
         .annotate(
             collection_access=Exists(
-                Collection.user_queryset(request.user).filter(
+                Collection.user_queryset(user).filter(
                     id=OuterRef("job_start__collection__id")
                 )
             )
         )
     )
-    return apply_sort_param(request.GET.get("sort"), queryset, DatasetSchema)
+
+    # Get the opted-out count and apply the filter.
+    # Doing this manually here instead of in DatasetFilterSchema because the latter
+    # was a pain given the need for user access.
+    user_opt_out_exists_filter = DatasetUserSettings.user_opt_out_exists_filter(user)
+    if request.GET.get("opted_out") in ("true", "1"):
+        opted_out_count = None
+        queryset = queryset.filter(user_opt_out_exists_filter)
+    else:
+        opted_out_count = queryset.filter(user_opt_out_exists_filter).count()
+        queryset = queryset.filter(~user_opt_out_exists_filter)
+
+    return (
+        apply_sort_param(request.GET.get("sort"), queryset, DatasetSchema),
+        opted_out_count,
+    )
 
 
 @public_api.get("/datasets/filter_values", response=List[Any])
@@ -815,7 +859,8 @@ def datasets_filter_values(request, field: str):
 def get_dataset(request, dataset_id: int):
     """Retrieve a specific Dataset"""
     return get_object_or_404(
-        Dataset.user_queryset(request.user)
+        # Allow direct access to opted-out datasets.
+        Dataset.user_queryset(request.user, include_opted_out=True)
         .prefetch_related("job_start")
         .prefetch_related("job_start__job_type")
         .prefetch_related("job_start__job_type__category")
@@ -846,6 +891,8 @@ def get_dataset(request, dataset_id: int):
 )
 def update_dataset_teams(request, dataset_id: int, payload: List[MinimalTeamSchema]):
     """Retrieve a specific Dataset"""
+    # We're not returning the Dataset object here, so no need to use get_dataset()
+    # to ensure that it conforms to DatasetSchema.
     dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
     # Enforce permissions.
     if not request.user.has_perm(Permissions.CHANGE_DATASET_TEAMS, dataset):
@@ -1014,6 +1061,31 @@ def update_collection(request, payload: UpdateCollectionSchema, collection_id: i
     collection.save()
 
     return collection
+
+
+@public_api.patch("/datasets/{int:dataset_id}", response=DatasetSchema)
+def update_dataset(request, payload: UpdateDatasetSchema, dataset_id: int):
+    """Update an existing Dataset."""
+    req_user = request.user
+    # Leverage get_dataset() to ensure that the instance object that we
+    # return conforms to DatasetSchema (i.e. includes collection_access, and team_ids)
+    dataset = get_dataset(request, dataset_id)
+    payload_d = payload.dict(exclude_none=True)
+    # Pop any specified user_settings for separate handling.
+    user_settings = payload_d.pop("user_settings", None)
+    if user_settings:
+        # User only needs VIEW perms to modify user settings.
+        if not req_user.has_perm(Permissions.VIEW_DATASET, dataset):
+            raise PermissionDenied
+        DatasetUserSettings.objects.update_or_create(
+            dataset=dataset,
+            user=req_user,
+            defaults=user_settings,
+        )
+    # Only updates to user_settings are currently supported.
+    if payload_d:
+        raise HttpError(400, f"Can not update Dataset fields: {payload_d}")
+    return dataset
 
 
 @public_api.patch("/users/{user_id}", response=UserSchema)

@@ -32,6 +32,10 @@ export const Paths = {
   generateCollectionDataset: (collectionId: Collection["id"]) =>
     `/datasets/generate?${UrlCollectionParamName}=${collectionId}`,
 
+  hiddenCollections: "/hidden-collections",
+
+  hiddenDatasets: "/hidden-datasets",
+
   buildSubCollection: (sourceCollectionIds?: Array<Collection["id"]>) =>
     sourceCollectionIds === undefined
       ? "/collections/custom-collection-builder"

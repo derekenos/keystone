@@ -25,6 +25,7 @@
 
 {% block head_extra %}
 <script src="{{ static('/js/arch-dataset-teams-selector.js') }}" type="module"></script>
+<script src="{{ static('/js/arch-dataset-settings-button.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-tooltip.js') }}" type="module"></script>
 {% if not publishing_disabled and dataset.job_start.job_type.can_publish %}
 <script src="{{ static('/js/arch-dataset-publishing-card.js') }}" type="module"></script>
@@ -96,6 +97,24 @@
 
   document.addEventListener("DOMContentLoaded", () => init());
 </script>
+
+<style>
+ #files-wrapper {
+   position: relative;
+ }
+
+ #files-wrapper > h2 {
+   display: inline-block;
+ }
+
+ #files-wrapper > arch-dataset-settings-button {
+   display: inline-block;
+   position: absolute;
+   right: 0;
+   bottom: 0.3rem;
+ }
+</style>
+
 {% endblock %}
 
 {% block content %}
@@ -121,7 +140,14 @@
     </div>
     {% endif %}
 
-    <h2 id="datasets">File(s)</h2>
+    <div id="files-wrapper">
+      <h2 id="datasets">File(s)</h2>
+      <arch-dataset-settings-button
+        datasetId="{{ dataset.id }}"
+        title="Edit dataset settings"
+        settings='{{ user_settings | tojson }}'
+      ></arch-dataset-settings-button>
+    </div>
     <p>
       {{ dataset.job_start.job_type.description }} For help and information, see: <a href="https://arch-webservices.zendesk.com/hc/en-us/articles/17137082448276" target="_blank">How to download and open ARCH datasets.</a>
     </p>

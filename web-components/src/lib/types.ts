@@ -138,6 +138,14 @@ export type Dataset = {
   state: ProcessingState;
 };
 
+export interface DatasetSettings {
+  opt_out: boolean;
+}
+
+export interface DatasetUpdate {
+  user_settings: DatasetSettings;
+}
+
 type DatasetStartTimeString = string;
 
 export type JobIdStatesMap = Record<
@@ -275,6 +283,7 @@ export type PublishedDatasetMetadataJSONSchemaProps = Record<
 export type BaseFilteredApiResponse<T> = {
   count: number;
   items: T;
+  opted_out_count?: number | null;
 };
 
 type FilteredApiResults<T> = Array<T>;
@@ -284,10 +293,6 @@ type DistinctApiResults<T> = Array<T[keyof T]>;
 export type FilteredApiResponse<T> = BaseFilteredApiResponse<
   FilteredApiResults<T>
 >;
-
-export type CollectionFilteredApiResponse = FilteredApiResponse<Collection> & {
-  opted_out_count?: number | null;
-};
 
 export type DistinctApiResponse<T> = BaseFilteredApiResponse<
   DistinctApiResults<T>

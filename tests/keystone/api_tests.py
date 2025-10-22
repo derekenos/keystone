@@ -81,11 +81,14 @@ class Client(_Client):
     def update_team(self, team, update_d):
         return self.patch(f"/api/teams/{team.id}", update_d, "application/json")
 
-    def list_datasets(self):
-        return self.get(f"/api/datasets")
+    def list_datasets(self, **params):
+        return self.get(f"/api/datasets", params)
 
     def get_dataset(self, dataset_id):
         return self.get(f"/api/datasets/{dataset_id}")
+
+    def update_dataset(self, dataset, update_d):
+        return self.patch(f"/api/datasets/{dataset.id}", update_d, "application/json")
 
     def update_dataset_teams(self, dataset_id, teams):
         return self.post(
@@ -653,6 +656,33 @@ def test_publication_status_reflects_internal_job_state_when_arch_404s(
     # the internal job state is terminal.
     make_jobevent(job_start=js, event_type=JobEventTypes.CANCELLED)
     assert _make_request().status_code == HTTPStatus.NOT_FOUND
+
+
+@mark.django_db
+def test_dataset_user_settings_update(make_user, make_user_dataset):
+    """The Dataset endpoint supports creation / update of associated DatasetUserSettings
+    instances via the "user_settings" payload field."""
+    user = make_user()
+    dataset = make_user_dataset(user)
+    client = Client(user)
+    # opted_out_count is always an integer when opted_out query param is not specified.
+    pagination_response = client.list_datasets().json()
+    assert pagination_response["count"] == 1
+    assert pagination_response["opted_out_count"] == 0
+    assert pagination_response["items"][0]["id"] == dataset.id
+    # Create an opt-out user setting.
+    res = client.update_dataset(dataset, {"user_settings": {"opt_out": True}})
+    assert res.status_code == HTTPStatus.OK
+    # Check that the dataset list endpoint exclude the opted-out dataset.
+    pagination_response = client.list_datasets().json()
+    assert pagination_response["count"] == 0
+    assert pagination_response["opted_out_count"] == 1
+    # Check that we can retrieve opted-out datasets by specifying the opted_out=true param.
+    pagination_response = client.list_datasets(opted_out="true").json()
+    assert pagination_response["count"] == 1
+    # opted_out_count is null when opted_out=true param is specified.
+    assert pagination_response["opted_out_count"] is None
+    assert pagination_response["items"][0]["id"] == dataset.id
 
 
 ###############################################################################

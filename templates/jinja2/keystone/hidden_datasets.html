@@ -1,0 +1,35 @@
+{% set breadcrumbs = (("Hidden Datasets", "hidden_datasets"),) %}
+{% extends 'keystone/base.html' %}
+
+{% block header_title %}
+Hidden Datasets
+{% endblock %}
+
+{% block head_extra %}
+  <script src="{{ static('/js/arch-dataset-explorer-table.js') }}" type="module"></script>
+  <script src="{{ static('/js/arch-alert.js') }}" type="module"></script>
+
+  <style>
+   arch-alert {
+     display: block;
+     margin-top: 1rem;
+   }
+
+   .card-container > arch-dataset-explorer-table {
+     margin-top: 0;
+   }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <arch-alert
+    alert-class="info"
+    message="You are viewing your hidden datasets. Click each dataset's &quot;Settings&quot; button to toggle the &quot;Hide&quot; option OFF to return it to your main datasets table."
+    non-dismissable
+  ></arch-alert>
+  <div class="card-container">
+    <arch-dataset-explorer-table show-hidden></arch-dataset-explorer-table>
+  </div>
+</div>
+{% endblock %}

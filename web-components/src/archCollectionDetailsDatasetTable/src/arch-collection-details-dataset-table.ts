@@ -3,15 +3,14 @@ import { customElement, property, state } from "lit/decorators.js";
 
 import { ArchDataTable } from "../../archDataTable/index";
 import { BoolDisplayMap, EventTypeDisplayMap } from "../../lib/constants";
-import { Dataset, ValueOf } from "../../lib/types";
-import { Topics } from "../../lib/pubsub";
 import {
   Paths,
   createElement,
   isActiveProcessingState,
   isoStringToDateString,
 } from "../../lib/helpers";
-import { ProcessingState } from "../../lib/types";
+import { Topics } from "../../lib/pubsub";
+import { Dataset, ProcessingState, ValueOf } from "../../lib/types";
 import Styles from "./styles";
 
 @customElement("arch-collection-details-dataset-table")

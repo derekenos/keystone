@@ -1,5 +1,5 @@
 import { PropertyValues } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 
 import { ArchDataTable } from "../../archDataTable/index";
 import { BoolDisplayMap, EventTypeDisplayMap } from "../../lib/constants";
@@ -14,6 +14,8 @@ import Styles from "./styles";
 
 @customElement("arch-dataset-explorer-table")
 export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
+  @property({ type: Boolean, attribute: "show-hidden" }) showHidden = false;
+
   @state() columnNameHeaderTooltipMap = {
     category:
       "Dataset categories are Collection, Network, Text, and File Format",
@@ -68,12 +70,17 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
   willUpdate(_changedProperties: PropertyValues) {
     super.willUpdate(_changedProperties);
 
+    const { showHidden } = this;
+
     this.apiCollectionEndpoint = "/datasets";
     this.apiItemResponseIsArray = true;
     this.apiItemTemplate = "/datasets?id=:id";
     this.itemPollPredicate = (item) => isActiveProcessingState(item.state);
     this.itemPollPeriodSeconds = 3;
-    this.apiStaticParamPairs = [];
+    // Maybe show only hidden datasets.
+    if (showHidden) {
+      this.apiStaticParamPairs = [["opted_out", "true"]];
+    }
     this.cellRenderers = [
       ArchDatasetExplorerTable.renderNameCell,
 
