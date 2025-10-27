@@ -1,0 +1,19 @@
+Hello {{ username }},
+
+ARCH has published the following {{ dataset_type_name }} dataset from the collection "{{ collection_name }}":
+
+{% for k, vs in metadata.items() %}
+{%- if len(vs) == 1 %}
+{{ k }}: {{ vs[0] }}
+{%- else %}
+{{ k }}:
+{%- for v in vs %}
+  - {{ v }}
+{%- endfor %}
+{%- endif %}
+{%- endfor %}
+
+You can find a link to this published dataset at: {{ dataset_url }}#publishing
+
+Best,
+The ARCH team

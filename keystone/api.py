@@ -569,6 +569,8 @@ def register_job_complete(request, payload: JobCompleteIn):
         jobmail.send_dataset_finished(request, job_complete)
     elif job_type.id == KnownArchJobUuids.USER_DEFINED_QUERY:
         jobmail.send_custom_collection_finished(request, job_complete)
+    elif job_type.id == KnownArchJobUuids.DATASET_PUBLICATION:
+        jobmail.send_dataset_publication_complete(request, job_complete)
 
     return HTTPStatus.NO_CONTENT, None
 

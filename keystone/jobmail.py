@@ -3,13 +3,21 @@ from django.template.loader import get_template
 
 from config import settings
 
-from keystone.context_processors import helpers
+from keystone.context_processors import (
+    extra_builtins,
+    helpers,
+)
+from keystone.models import JobStart
 
 
 def send(template_base_name, context, subject, to_addresses):
     """Send a templated email."""
-    txt_content = get_template(f"email/{template_base_name}.txt").render(context)
-    html_content = get_template(f"email/{template_base_name}.html").render(context)
+    # Extend the template context with our extra builtins.
+    final_context = context | extra_builtins(request=None)
+    txt_content = get_template(f"email/{template_base_name}.txt").render(final_context)
+    html_content = get_template(f"email/{template_base_name}.html").render(
+        final_context
+    )
     msg = EmailMultiAlternatives(
         subject, txt_content, settings.DEFAULT_FROM_EMAIL, to_addresses
     )
@@ -52,6 +60,33 @@ def send_custom_collection_finished(request, job_complete):
     }
     subject = f"ARCH: Your custom collection “{collection_name}” is ready to use"
     send("custom-collection-finished", context, subject, (user.email,))
+
+
+def send_dataset_publication_complete(request, job_complete):
+    """Send a Dataset Publication complete email."""
+    job_start = job_complete.job_start
+    user = job_start.user
+    collection = job_start.collection
+    collection_name = collection.name
+    # Retrieve the dataset indicated in the publication job input spec.
+    dataset = JobStart.objects.get(
+        id=job_start.parameters["conf"]["inputSpec"]["uuid"]
+    ).dataset_set.first()
+    context = {
+        "username": user.username,
+        "collection_name": collection_name,
+        "collection_url": helpers(request)["abs_url"](
+            "collection-detail", args=(collection.id,)
+        ),
+        "dataset_type_name": dataset.job_start.job_type.name,
+        "dataset_url": helpers(request)["abs_url"](
+            "dataset-detail", args=(dataset.id,)
+        ),
+        "metadata": job_start.parameters["conf"]["params"]["metadata"],
+        "support_url": settings.ARCH_SUPPORT_TICKET_URL,
+    }
+    subject = "ARCH: Your dataset is published!"
+    send("dataset-publication-complete", context, subject, (user.email,))
 
 
 def send_job_failed(request, job_complete, send_user_email):
