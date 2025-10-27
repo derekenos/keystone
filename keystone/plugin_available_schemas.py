@@ -82,7 +82,9 @@ class FilesInputSpec(InputSpecBase):
     @property
     def is_warc_type(self):
         """Return whether this input spec is a WARC type."""
-        return self.inputType in (
+        return self.inputType is not None and FilesInputSpecInputType(
+            self.inputType
+        ) in (
             FilesInputSpecInputType.CDX,
             FilesInputSpecInputType.WARC,
         )
