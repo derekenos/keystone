@@ -14,7 +14,9 @@ PIP_PATH = $(KEYSTONE_VENV_PATH)/bin/pip
 
 $(KEYSTONE_VENV_PATH):
 	python3 -m venv $(KEYSTONE_VENV_PATH) --prompt .
-	$(PIP_PATH) install -U pip setuptools wheel pip-tools
+	# Pin pip version until this pip-tools bug is fixed:
+	# https://github.com/jazzband/pip-tools/issues/2252
+	$(PIP_PATH) install -U pip==25.2 setuptools wheel pip-tools
 
 venv: $(KEYSTONE_VENV_PATH)
 
