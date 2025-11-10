@@ -1,10 +1,10 @@
-import{s as e,_ as t,e as s,y as o,a as i}from"./chunk-lit-element.js";import{t as l}from"./chunk-state.js";import{D as a}from"./chunk-helpers.js";let n=class extends e{constructor(){super(...arguments),this.emptyOptionsPlaceholder=o``,this.deselectButtonText="remove",this.headingLevel=3,this.optionsSortCompareFn=void 0,this.readOnlyMessage=void 0,this.selectedOptionsTitle="Selected Options",this.selectCtaText="Select value to add",this.availableOptions=[],this.disabled=!1}sortByLabel(e,t){const{labelGetter:s}=this,o=s(e),i=s(t);return o>i?1:o<i?-1:0}heading(e){const{headingLevel:t}=this;switch(t){case 1:return o`<h1>${e}</h1>`;case 2:return o`<h2>${e}</h2>`;case 3:return o`<h3>${e}</h3>`;case 4:return o`<h4>${e}</h4>`;case 5:return o`<h5>${e}</h5>`;case 6:return o`<h6>${e}</h6>`;default:return o``}}render(){const{deselectButtonText:e,disabled:t,emptyOptionsPlaceholder:s,labelGetter:i,options:l,selectCtaText:n,readOnlyMessage:p,selectedOptions:r,selectedOptionsTitle:d,valueGetter:h}=this;return 0===l.length?s:(this.updateAvailableOptions(),o`
-      ${0===r.length?o``:o`
+import{s as e,_ as t,e as s,y as o,a as i}from"./chunk-query-assigned-elements.js";import{t as l}from"./chunk-state.js";import{D as a}from"./chunk-helpers.js";let n=class extends e{constructor(){super(...arguments),this.emptyOptionsPlaceholder=o``,this.deselectButtonText="remove",this.headingLevel=3,this.optionsSortCompareFn=void 0,this.readOnlyMessage=void 0,this.selectedOptionsTitle="Selected Options",this.selectCtaText="Select value to add",this.availableOptions=[],this.disabled=!1}sortByLabel(e,t){const{labelGetter:s}=this,o=s(e),i=s(t);return o>i?1:o<i?-1:0}heading(e){const{headingLevel:t}=this;switch(t){case 1:return o`<h1>${e}</h1>`;case 2:return o`<h2>${e}</h2>`;case 3:return o`<h3>${e}</h3>`;case 4:return o`<h4>${e}</h4>`;case 5:return o`<h5>${e}</h5>`;case 6:return o`<h6>${e}</h6>`;default:return o``}}render(){const{deselectButtonText:e,disabled:t,emptyOptionsPlaceholder:s,labelGetter:i,options:l,selectCtaText:n,readOnlyMessage:r,selectedOptions:p,selectedOptionsTitle:d,valueGetter:h}=this;return 0===l.length?s:(this.updateAvailableOptions(),o`
+      ${0===p.length?o``:o`
             ${this.heading(d)}
             <ul>
-              ${r.map((s=>o`<li>
+              ${p.map((s=>o`<li>
                     ${i(s)}
-                    ${p?o``:o`
+                    ${r?o``:o`
                           <button
                             ?disabled=${t}
                             @click=${e=>this.deselectOption(e.target,s)}
@@ -15,7 +15,7 @@ import{s as e,_ as t,e as s,y as o,a as i}from"./chunk-lit-element.js";import{t 
                   </li>`))}
             </ul>
           `}
-      ${p||(0===this.availableOptions.length?o``:o`
+      ${r||(0===this.availableOptions.length?o``:o`
             <label>
               ${n}
               <select ?disabled=${t} @change=${this.selectHandler}>

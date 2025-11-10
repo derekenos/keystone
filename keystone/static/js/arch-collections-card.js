@@ -1,4 +1,4 @@
-import{i as t,_ as o,s as e,y as s,a as l}from"./chunk-lit-element.js";import{t as a}from"./chunk-state.js";import{A as i}from"./chunk-ArchAPI.js";import{a as c,g as n}from"./chunk-helpers.js";import"./chunk-arch-card.js";import"./arch-loading-indicator.js";import{g as r,c as d}from"./chunk-styles.js";import"./chunk-scale-large.js";import"./chunk-sp-overlay.js";var h,m=[r,d,t`
+import{i as t,_ as o,s as e,y as s,a as l}from"./chunk-query-assigned-elements.js";import{t as a}from"./chunk-state.js";import{A as i}from"./chunk-ArchAPI.js";import{a as c,g as n}from"./chunk-helpers.js";import"./chunk-arch-card.js";import"./arch-loading-indicator.js";import{g as r,c as d}from"./chunk-styles.js";import"./chunk-scale-large.js";import"./chunk-focusable.js";import"./chunk-sp-overlay.js";var h,m=[r,d,t`
     thead > tr.hidden-header {
       color: transparent;
     }

@@ -4,6 +4,7 @@ import "@spectrum-web-components/switch/sp-switch.js";
 export declare class ArchJsonSchemaForm<T> extends LitElement {
     schema: JSONSchemaType<T>;
     data: T;
+    dataKeyAliasMap: Record<string, string>;
     propertiesOrder: Array<keyof T>;
     form: HTMLFormElement;
     inputs: NodeList;

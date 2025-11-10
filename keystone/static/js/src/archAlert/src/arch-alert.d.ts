@@ -13,6 +13,7 @@ export declare class ArchAlert extends LitElement {
     alertClass: AlertClass;
     hidden: boolean;
     message: string | TemplateResult;
+    nonDismissable: boolean;
     static styles: import("lit").CSSResult[];
     render(): TemplateResult<1>;
     hide(): void;
