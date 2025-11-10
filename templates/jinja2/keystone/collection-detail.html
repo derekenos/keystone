@@ -3,11 +3,12 @@
 {% set metadata = collection.metadata or {} %}
 {% set object_count = metadata.get("object_count") %}
 {% set object_name = metadata.get("object_name_singular") if object_count == 1 else metadata.get("object_name_plural") %}
+{% set is_custom_can_change = collection.collection_type == CollectionTypes.CUSTOM and request.user.has_perm(Permissions.CHANGE_COLLECTION, collection) %}
 
 {% extends 'keystone/base.html' %}
 
 {% block header_title %}
-{% if collection.collection_type == CollectionTypes.CUSTOM and request.user.has_perm(Permissions.CHANGE_COLLECTION, collection) %}
+{% if is_custom_can_change %}
 <arch-contenteditable
   modelName="collection"
   instanceUrl="{{ url('public:update_collection', args=(collection.id,)) }}"
@@ -23,12 +24,60 @@
 {% block head_extra %}
 <script src="{{ static('/js/arch-collection-details-dataset-table.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-contenteditable.js') }}" type="module"></script>
+<script src="{{ static('/js/arch-collection-settings-button.js') }}" type="module"></script>
+
+<style>
+ #overview-wrapper {
+   position: relative;
+ }
+
+ #overview-wrapper > h2 {
+   display: inline-block;
+ }
+
+ #overview-wrapper > arch-collection-settings-button {
+   display: inline-block;
+   position: absolute;
+   right: 0;
+   bottom: 0.3rem;
+ }
+</style>
+
+<script>
+ function initOptOutListener() {
+   // Hide/show the Datasets table when the user opts out/in.
+   const els = Object.fromEntries([
+     "arch-collection-settings-button",
+     "#datasets-table-wrapper",
+     "arch-collection-details-dataset-table",
+     "#opted-out-datasets-message"
+   ].map(selector => [selector, document.querySelector(selector)]));
+   els["arch-collection-settings-button"].addEventListener("submit", () => {
+     const opted_out = els["arch-collection-settings-button"].settings.opt_out;
+     els["#datasets-table-wrapper"].style.display = opted_out ? "none" : "block";
+     els["#opted-out-datasets-message"].style.display = opted_out ? "block" : "none";
+     // Trigger a datasets table search if it's just been made visible.
+     if (!opted_out) {
+       els["arch-collection-details-dataset-table"].dataTable.throttledDoSearch(true);
+     }
+   });
+ }
+ window.addEventListener("DOMContentLoaded", () => initOptOutListener());
+</script>
+
 {% endblock %}
 
 {% block content %}
 <div class="row page-tab" id="summary-tab">
   <div class="large-12 columns">
-    <h2>Overview</h2>
+    <div id="overview-wrapper">
+      <h2>Overview</h2>
+      <arch-collection-settings-button
+        collectionId="{{ collection.id }}"
+        title="Edit collection settings"
+        settings='{{ user_settings | tojson }}'
+      ></arch-collection-settings-button>
+    </div>
     <div class="card">
       <div class="card-body">
         <div id="collection-metadata-wrapper">
@@ -113,10 +162,17 @@
 
       <div class="row">
         <div class="large-12 columns">
-          <arch-collection-details-dataset-table
-            collectionId="{{ collection.id }}"
-          >
-          </arch-collection-details-dataset-table>
+          <div id="datasets-table-wrapper" style="display: {{ 'none' if user_settings.opt_out else 'block' }}">
+            <arch-collection-details-dataset-table
+              collectionId="{{ collection.id }}"
+            >
+            </arch-collection-details-dataset-table>
+          </div>
+          <div id="opted-out-datasets-message" style="display: {{ 'block' if user_settings.opt_out else 'none' }}">
+            <em>
+              Click the "Settings" button and toggle the "Hide" option OFF to view this collection's associated datasets.
+            </em>
+          </div>
         </div>
       </div>
     </div>

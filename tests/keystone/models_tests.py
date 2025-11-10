@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import (
     datetime,
     timedelta,
@@ -15,12 +16,15 @@ from keystone.models import (
     ArchQuota,
     Collection,
     CollectionTypes,
+    CollectionUserSettings,
+    Dataset,
     JobEvent,
     JobEventTypes,
     JobStatus,
     Team,
     User,
 )
+from keystone.permissions import Permissions
 from .test_helpers import read_json_file
 
 
@@ -58,6 +62,141 @@ class TestCollection:
             collection3,
             collection4,
         }
+
+    @mark.django_db
+    def test_user_queryset_include_opted_out(self, make_user, make_collection):
+        """Specifying include_opted_out=True to Collection.user_queryset() will toggle
+        the inclusion of opted-out collections."""
+        user = make_user()
+        collection = make_collection(accounts=(user.account,))
+        assert Collection.user_queryset(user).filter(id=collection.id).exists()
+        user_settings = CollectionUserSettings.objects.create(
+            collection=collection, user=user, opt_out=True
+        )
+        assert not Collection.user_queryset(user).filter(id=collection.id).exists()
+        assert (
+            Collection.user_queryset(user, include_opted_out=True)
+            .filter(id=collection.id)
+            .exists()
+        )
+
+    @mark.django_db
+    def test_collectionusersettings_opt_out(self, make_user, make_user_dataset):
+        """A collection to which a user would otherwise have access to is
+        excluded from Collection.user_queryset() when a corresponding CollectionUserSettings
+        instance exists with opt_out=True.
+        """
+        # Create a test user and several other users, some of which belong to the
+        # same account as the test user, and one of which is a superuser.
+        test_user = make_user()
+        other_users = (
+            make_user(is_superuser=True, account=test_user.account),
+            make_user(account=test_user.account),
+            make_user(),  # different account user
+        )
+        # Create collections w/ associated datasets for each user.
+        user_collections = defaultdict(list)
+        collection_datasets = defaultdict(list)
+
+        def make_user_collections_with_datasets(user):
+            for _ in range(3):
+                dataset = make_user_dataset(user)
+                collection = dataset.job_start.collection
+                collection_datasets[collection].append(dataset)
+                user_collections[user].append(collection)
+
+        for user in (test_user,) + other_users:
+            make_user_collections_with_datasets(user)
+
+        # The make_user_dataset() helper creates an user account-level authorization for
+        # each collection that it creates, and we want to test that other users don't lose
+        # access to a shared collection when one user opts-out, so let's collection all the
+        # collection authorized for the test_user account.
+        test_user_account_authorized_collections = Collection.objects.filter(
+            accounts=test_user.account
+        ).all()
+        assert len(test_user_account_authorized_collections) == 9
+
+        def has_collection_and_datasets_access(user, collection):
+            """Return a bool indicating whether the user has access (via Model.user_queryset)
+            to the specified collection and its associated datasets."""
+            has_collection_access = (
+                Collection.user_queryset(user).filter(id=collection.id).exists()
+            )
+            # By default, datasets are only accessible to the user that created them, so check
+            # either for all collection-associated datasets or none to be visible based on
+            # whether this collection was created on behalf of the user.
+            dataset_ids = set(
+                Dataset.user_queryset(user)
+                .filter(job_start__collection=collection)
+                .values_list("id", flat=True)
+            )
+            datasets_access_ok = dataset_ids == (
+                {dataset.id for dataset in collection_datasets[collection]}
+                if collection in user_collections[user]
+                else set()
+            )
+            return has_collection_access and datasets_access_ok
+
+        def assert_others_unaffected():
+            """Assert that other users still have access to all of their collections and
+            associated datasets."""
+            for user in other_users:
+                if user.account == test_user.account:
+                    # User belongs to the same account as the test user, so check
+                    # for access to all account-authorized collections.
+                    collections = test_user_account_authorized_collections
+                else:
+                    # User does not belong to the same account as the test user,
+                    # so just test against that user's collections.
+                    collections = user_collections[user]
+                for collection in collections:
+                    assert has_collection_and_datasets_access(user, collection)
+
+        # The test user starts off with access to all their account-authorized collections.
+        for collection in test_user_account_authorized_collections:
+            assert has_collection_and_datasets_access(test_user, collection)
+        # The other users also have access to all their collections and datasets.
+        assert_others_unaffected()
+
+        # The test user chooses to opt-out from their first account-authorized collection.
+        first_collection, *other_collections = test_user_account_authorized_collections
+        user_settings = CollectionUserSettings.objects.create(
+            collection=first_collection, user=test_user, opt_out=True
+        )
+
+        # The test user has lost access to their first collection and its datasets but
+        # retains access to their other collections.
+        assert not has_collection_and_datasets_access(test_user, first_collection)
+        for collection in other_collections:
+            assert has_collection_and_datasets_access(test_user, collection)
+        # The other users retain access to all their collections and datasets.
+        assert_others_unaffected()
+
+        # The test user chooses to opt back in to their first collection. Note that this is
+        # different than never having opted-out because the CollectionUserSettings instance
+        # will continue to exist (whereas no such instance existed before) but with opt_out=False.
+        user_settings.opt_out = False
+        user_settings.save()
+        for collection in test_user_account_authorized_collections:
+            assert has_collection_and_datasets_access(test_user, collection)
+        # The other users retain access to all their collections and datasets.
+        assert_others_unaffected()
+
+    @mark.django_db
+    def test_collectionusersettings_opt_out_view_perms(
+        self, make_user, make_collection
+    ):
+        """A user retains the VIEW_COLLECTION permission for opted-out collections."""
+        user = make_user()
+        collection = make_collection(accounts=(user.account,))
+        assert Collection.user_queryset(user).filter(id=collection.id).exists()
+        assert collection.user_has_perm(user, Permissions.VIEW_COLLECTION)
+        user_settings = CollectionUserSettings.objects.create(
+            collection=collection, user=user, opt_out=True
+        )
+        assert not Collection.user_queryset(user).filter(id=collection.id).exists()
+        assert collection.user_has_perm(user, Permissions.VIEW_COLLECTION)
 
     @mark.django_db
     def test_ait_collection_input_spec(self, make_collection):

@@ -32,6 +32,7 @@ urlpatterns = [
     path("account/users", views.account_users, name="account-users"),
     path("account/teams", views.account_teams, name="account-teams"),
     path("collections", views.collections, name="collections"),
+    path("hidden-collections", views.hidden_collections, name="hidden_collections"),
     path(
         "collections/custom-collection-builder",
         views.sub_collection_builder,

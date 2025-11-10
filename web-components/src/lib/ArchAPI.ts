@@ -2,7 +2,10 @@ import { identity } from "./helpers";
 import {
   ApiParams,
   Collection,
+  CollectionFilteredApiResponse,
   CollectionIdNamePairs,
+  CollectionSettings,
+  CollectionUpdate,
   Dataset,
   FilteredApiResponse,
   JobId,
@@ -88,10 +91,21 @@ export default class ArchAPI {
   static get collections() {
     return {
       get: (params: ApiParams<Collection> = []) =>
-        ArchAPI.jsonRequest<Collection, FilteredApiResponse<Collection>>(
+        ArchAPI.jsonRequest<Collection, CollectionFilteredApiResponse>(
           "GET",
           "/collections",
           params
+        ),
+
+      updateUserSettings: (
+        collectionId: Collection["id"],
+        settings: CollectionSettings
+      ) =>
+        ArchAPI.jsonRequest<CollectionUpdate, null>(
+          "PATCH",
+          `/collections/${collectionId}`,
+          undefined,
+          { user_settings: settings }
         ),
     };
   }

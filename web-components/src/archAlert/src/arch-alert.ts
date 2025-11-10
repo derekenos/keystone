@@ -16,9 +16,12 @@ export enum AlertClass {
 
 @customElement("arch-alert")
 export class ArchAlert extends LitElement {
-  @property({ type: String }) alertClass: AlertClass = AlertClass.Primary;
+  @property({ type: String, attribute: "alert-class" }) alertClass: AlertClass =
+    AlertClass.Primary;
   @property({ type: Boolean }) hidden = false;
   @property({ type: String }) message: string | TemplateResult = html``;
+  @property({ type: Boolean, attribute: "non-dismissable" }) nonDismissable =
+    false;
 
   static styles = styles;
 
@@ -30,16 +33,18 @@ export class ArchAlert extends LitElement {
         role="alert"
       >
         <p>${this.message}</p>
-        <button
-          type="button"
-          class="close"
-          data-dismiss="alert"
-          aria-label="Close"
-          style="background-color: transparent;"
-          @click=${this.hide}
-        >
-          <span aria-hidden="true">&times;</span>
-        </button>
+        ${this.nonDismissable
+          ? html``
+          : html` <button
+              type="button"
+              class="close"
+              data-dismiss="alert"
+              aria-label="Close"
+              style="background-color: transparent;"
+              @click=${this.hide}
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>`}
       </div>
     `;
   }

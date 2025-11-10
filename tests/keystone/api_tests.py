@@ -18,6 +18,7 @@ from config.settings import (
 
 from keystone.api import CreateUserSchema
 from keystone.models import (
+    Collection,
     CollectionTypes,
     Dataset,
     Team,
@@ -93,6 +94,9 @@ class Client(_Client):
             [{"id": t.id, "name": t.name} for t in teams],
             "application/json",
         )
+
+    def list_collections(self, **params):
+        return self.get("/api/collections", params)
 
     def update_collection(self, collection, update_d):
         return self.patch(
@@ -596,26 +600,46 @@ def test_non_dataset_owner_can_not_update_teams(
 @mark.parametrize("is_superuser", (True, False))
 @mark.parametrize(
     "field",
-    (
-        "arch_id",
-        "description",
-        "collection_type",
-        "created_at",
-        "size_bytes",
-        "info_url",
-        "metadata",
-    ),
+    {f.name for f in Collection._meta.fields if f.name not in ("name", "image")},
 )
 def test_only_collection_name_can_be_updated(
     is_superuser, field, make_collection, make_user
 ):
-    """The Collection endpoint does not support updates to any non-name field"""
+    """The Collection endpoint does not support updates to any direct, non-name attribute.
+    Note that user_settings updates are handled / tested elsewhere."""
     user = make_user(is_superuser=is_superuser)
     collection = make_collection()
     res = Client(user).update_collection(
         collection, {field: getattr(collection, field)}
     )
     assert res.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+
+@mark.django_db
+def test_collection_user_settings_update(make_user, make_collection):
+    """The Collection endpoint supports creation / update of associated CollectionUserSettings
+    instances via the "user_settings" payload field."""
+    user = make_user()
+    collection = make_collection(accounts=(user.account,))
+    client = Client(user)
+    # opted_out_count is always an integer when opted_out query param is not specified.
+    pagination_response = client.list_collections().json()
+    assert pagination_response["count"] == 1
+    assert pagination_response["opted_out_count"] == 0
+    assert pagination_response["items"][0]["id"] == collection.id
+    # Create an opt-out user setting.
+    res = client.update_collection(collection, {"user_settings": {"opt_out": True}})
+    assert res.status_code == HTTPStatus.OK
+    # Check that the collection list endpoint exclude the opted-out collection.
+    pagination_response = client.list_collections().json()
+    assert pagination_response["count"] == 0
+    assert pagination_response["opted_out_count"] == 1
+    # Check that we can retrieve opted-out collections by specifying the opted_out=true param.
+    pagination_response = client.list_collections(opted_out="true").json()
+    assert pagination_response["count"] == 1
+    # opted_out_count is null when opted_out=true param is specified.
+    assert pagination_response["opted_out_count"] is None
+    assert pagination_response["items"][0]["id"] == collection.id
 
 
 @mark.django_db
@@ -656,4 +680,13 @@ def test_normal_user_can_not_update_nonowned_noncustom_collection(
     collection_type, make_collection, make_user
 ):
     """A normal user does not have permission to update the name of any
-    collection other than a custom collection that they created."""
+    collection that is not a custom collection that they created."""
+    user = make_user()
+    collection = make_collection(
+        collection_type=getattr(CollectionTypes, collection_type),
+        # Excessively authorize user read access
+        accounts=(user.account,),
+        users=(user,),
+    )
+    res = Client(user).update_collection(collection, {"name": "new name"})
+    assert res.status_code == HTTPStatus.FORBIDDEN

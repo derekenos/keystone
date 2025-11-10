@@ -32,7 +32,10 @@ from .models import (
     UserRoles,
 )
 from .permissions import Permissions
-from .schemas import MULTI_INPUT_SPEC_TYPE
+from .schemas import (
+    MULTI_INPUT_SPEC_TYPE,
+    EmbeddedCollectionUserSettingsSchema,
+)
 from .validators import validate_collection_metadata
 from .solr import SolrClient
 
@@ -207,6 +210,12 @@ def collections(request):
 
 
 @login_required
+def hidden_collections(request):
+    """Hidden Collections table"""
+    return render(request, "keystone/hidden_collections.html")
+
+
+@login_required
 def sub_collection_builder(request):
     """Sub-Collection Builder"""
     return render(request, "keystone/sub-collection-builder.html")
@@ -280,7 +289,7 @@ def get_special_collection_configuration_info(collection):
 def collection_detail(request, collection_id):
     """Collection detail view"""
     collection = get_object_or_404(
-        Collection.user_queryset(request.user), id=collection_id
+        Collection.user_queryset(request.user, include_opted_out=True), id=collection_id
     )
     # Ensure that the collection's metadata is up-to-date.
     collection.refresh_metadata()
@@ -295,6 +304,12 @@ def collection_detail(request, collection_id):
         configuration_info = get_special_collection_configuration_info(collection)
     else:
         configuration_info = None
+    # Get any defined user settings instance or None and validate it using
+    # EmbeddedCollectionUserSettingsSchema to get a minimal (in the case
+    # of an existing instance) or default (in the case of no existing instance) object.
+    user_settings = EmbeddedCollectionUserSettingsSchema.validate(
+        collection.usersettings_set.first()
+    ).dict()
     return render(
         request,
         "keystone/collection-detail.html",
@@ -302,6 +317,7 @@ def collection_detail(request, collection_id):
             "collection": collection,
             "configuration_info": configuration_info,
             "custom_metadata_icons_template": custom_metadata_icons_template,
+            "user_settings": user_settings,
             "Permissions": Permissions,
         },
     )
