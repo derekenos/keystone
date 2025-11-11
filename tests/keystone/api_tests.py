@@ -11,10 +11,7 @@ from pytest import (
     raises,
 )
 
-from config.settings import (
-    GLOBAL_USER_USERNAME,
-    KnownArchJobUuids,
-)
+from config.settings import KnownArchJobUuids
 
 from keystone.api import CreateUserSchema
 from keystone.models import (
@@ -459,14 +456,12 @@ def test_no_user_can_edit_other_account_team(role, make_user, make_team):
 
 
 @mark.django_db
-def test_dataset_owner_team_global_access(
-    make_team, make_user, make_user_dataset, make_collection, global_datasets_user
+def test_dataset_owner_and_team_access(
+    make_team, make_user, make_user_dataset, make_collection
 ):
     """A dataset can only be accessed:
     - by its owner
     - by the members of any team for which the dataset has been authorized
-    - if it's owned by the global datasets user and the requesting user is
-      authorized to access the associated collection
     """
     # Create a user and add them to a team.
     user = make_user()
@@ -479,15 +474,6 @@ def test_dataset_owner_team_global_access(
 
     # Create a couple of user datasets.
     user_dataset_ids = [make_user_dataset(user).id, make_user_dataset(user).id]
-
-    # Create a collection to which both 'user' and the global_datasets_user have access
-    # and create an associated global-user-owned dataset.
-    global_collection = make_collection()
-    global_collection.users.set((global_datasets_user, user))
-    global_dataset = make_user_dataset(
-        global_datasets_user, collection=global_collection
-    )
-    user_dataset_ids.append(global_dataset.id)
 
     def check_access(_user, list_result_ids, get_test_id, get_test_ok):
         """Check a user's ability to list and retrieve datasets."""
@@ -540,6 +526,29 @@ def test_dataset_owner_team_global_access(
     other_user.teams.add(other_team)
     other_user.save()
     check_access(other_user, [dataset.id], dataset.id, True)
+
+
+@mark.django_db
+def test_dataset_no_implicit_global_access(
+    make_user, make_user_dataset, global_datasets_user
+):
+    """Previously, all datasets owned by the global datasets user were automatically
+    made available to all users who were authorized to access the associated collection,
+    but the introduction of dataset sharing via teams has made this obsolete, so we've
+    removed the implicit global datasets access, and this test asserts that.
+    """
+    # Create a test user with an owned dataset.
+    user = make_user()
+    user_dataset = make_user_dataset(user)
+    # Create a global datasets user-owned dataset and authorized the test user to
+    # access the associated collection.
+    global_dataset = make_user_dataset(global_datasets_user)
+    global_dataset.job_start.collection.users.add(user)
+    # Check that the test user only has access to their own dataset, but not the
+    # global dataset.
+    res = Client(user).list_datasets()
+    assert res.status_code == HTTPStatus.OK
+    assert {x["id"] for x in res.json()["items"]} == {user_dataset.id}
 
 
 @mark.django_db

@@ -682,16 +682,10 @@ class Dataset(models.Model):
         #  - owned by the specified user
         #  - owned by a user who is a teammate of the specified user and for
         #    which the team is authorized to access the dataset
-        #  - owned by the global datasets user and is associated with a
-        #    collection to which the user has access
         #  AND of which the associated collection the user has not opted out
         return Dataset.objects.filter(
             Q(job_start__user=user)
-            | (Q(teams=F("job_start__user__teams")) & Q(teams__members=user))
-            | (
-                Q(job_start__user__username=settings.GLOBAL_USER_USERNAME)
-                & Q(job_start__collection__users=user)
-            ),
+            | (Q(teams=F("job_start__user__teams")) & Q(teams__members=user)),
             ~CollectionUserSettings.user_opt_out_exists_filter(
                 user,
                 collection_path="job_start__collection",
