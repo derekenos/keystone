@@ -779,7 +779,10 @@ def list_datasets(request, filters: DatasetFilterSchema = Query(...)):
         .prefetch_related("job_start__collection")
         .annotate(
             team_ids=ArrayAgg(
-                "teams__id", filter=Q(teams__id__isnull=False), default=[]
+                "teams__id",
+                distinct=True,
+                filter=Q(teams__id__isnull=False),
+                default=[],
             )
         )
         .annotate(
@@ -816,7 +819,10 @@ def get_dataset(request, dataset_id: int):
         .prefetch_related("job_start__collection")
         .annotate(
             team_ids=ArrayAgg(
-                "teams__id", filter=Q(teams__id__isnull=False), default=[]
+                "teams__id",
+                distinct=True,
+                filter=Q(teams__id__isnull=False),
+                default=[],
             )
         )
         .annotate(
