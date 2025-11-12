@@ -389,7 +389,9 @@ def dataset_detail(request, dataset_id):
 @login_required
 def dataset_file_preview(request, dataset_id, filename):
     """Download a Dataset file preview."""
-    dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
+    dataset = get_object_or_404(
+        Dataset.user_queryset(request.user, include_opted_out=True), id=dataset_id
+    )
     # Request on behalf of the Dataset owner in the event of teammate access.
     return ArchAPI.proxy_file_preview_download(
         user=dataset.job_start.user,
@@ -412,7 +414,9 @@ def dataset_file_download(request, dataset_id, filename):
     else:
         # Do a non-access_key-based / potentially-logged-in-user download request.
         # Lookup the Dataset using request.user.
-        dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
+        dataset = get_object_or_404(
+            Dataset.user_queryset(request.user, include_opted_out=True), id=dataset_id
+        )
         # Request on behalf of the Dataset owner in the event of teammate access.
         user = dataset.job_start.user
 
@@ -428,7 +432,9 @@ def dataset_file_download(request, dataset_id, filename):
 @login_required
 def dataset_file_colab(request, dataset_id, filename):
     """Open a Dataset file in Google Colab."""
-    dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
+    dataset = get_object_or_404(
+        Dataset.user_queryset(request.user, include_opted_out=True), id=dataset_id
+    )
     job_file = get_object_or_404(
         JobFile, job_complete__job_start=dataset.job_start, filename=filename
     )

@@ -893,7 +893,9 @@ def update_dataset_teams(request, dataset_id: int, payload: List[MinimalTeamSche
     """Retrieve a specific Dataset"""
     # We're not returning the Dataset object here, so no need to use get_dataset()
     # to ensure that it conforms to DatasetSchema.
-    dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
+    dataset = get_object_or_404(
+        Dataset.user_queryset(request.user, include_opted_out=True), id=dataset_id
+    )
     # Enforce permissions.
     if not request.user.has_perm(Permissions.CHANGE_DATASET_TEAMS, dataset):
         raise PermissionDenied
@@ -1221,7 +1223,9 @@ def generate_dataset(request, payload: DatasetGenerationRequest):
 @public_api.get("/datasets/{dataset_id}/publication", response=DatasetPublicationInfo)
 def dataset_published_status(request, dataset_id: int):
     """Retrieve publication info for the specified Dataset"""
-    dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
+    dataset = get_object_or_404(
+        Dataset.user_queryset(request.user, include_opted_out=True), id=dataset_id
+    )
     # Request on behalf of the Dataset owner in the event of teammate access.
     try:
         return ArchAPI.get_dataset_publication_info(
@@ -1258,7 +1262,9 @@ def dataset_published_status(request, dataset_id: int):
 @public_api.post("/datasets/{dataset_id}/publication", response=JobStateInfo)
 def publish_dataset(request, dataset_id: int, metadata: DatasetPublicationMetadata):
     """Publish a dataset"""
-    dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
+    dataset = get_object_or_404(
+        Dataset.user_queryset(request.user, include_opted_out=True), id=dataset_id
+    )
     # Enforce permissions.
     if not request.user.has_perm(Permissions.PUBLISH_DATASET, dataset):
         raise PermissionDenied
@@ -1278,7 +1284,9 @@ def publish_dataset(request, dataset_id: int, metadata: DatasetPublicationMetada
 )
 def get_published_item_metadata(request, dataset_id: int):
     """Retrieve published petabox item metadata for the specified Dataset"""
-    dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
+    dataset = get_object_or_404(
+        Dataset.user_queryset(request.user, include_opted_out=True), id=dataset_id
+    )
     # Request on behalf of the Dataset owner in the event of teammate access.
     return ArchAPI.get_published_item_metadata(
         dataset.job_start.user, dataset.job_start.id
@@ -1293,7 +1301,9 @@ def update_published_item_metadata(
     request, dataset_id: int, metadata: DatasetPublicationMetadata
 ):
     """Update the metadata of a published Dataset petabox item"""
-    dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
+    dataset = get_object_or_404(
+        Dataset.user_queryset(request.user, include_opted_out=True), id=dataset_id
+    )
     # Allow any authorized publishers to edit the metadata.
     if not request.user.has_perm(Permissions.PUBLISH_DATASET, dataset):
         raise PermissionDenied
@@ -1308,7 +1318,9 @@ def update_published_item_metadata(
 )
 def delete_published_item(request, dataset_id: int):
     """Delete (i.e hide) a published Dataset"""
-    dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
+    dataset = get_object_or_404(
+        Dataset.user_queryset(request.user, include_opted_out=True), id=dataset_id
+    )
     # Allow any authorized publishers to unpublish.
     if not request.user.has_perm(Permissions.PUBLISH_DATASET, dataset):
         raise PermissionDenied
@@ -1319,7 +1331,9 @@ def delete_published_item(request, dataset_id: int):
 @public_api.get("/datasets/{dataset_id}/sample_viz_data", response=DatasetSampleVizData)
 def get_sample_viz_data(request, dataset_id: int):
     """Get the sample visualization data for the specific dataset."""
-    dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
+    dataset = get_object_or_404(
+        Dataset.user_queryset(request.user, include_opted_out=True), id=dataset_id
+    )
     # Request on behalf of the Dataset owner in the event of teammate access.
     return ArchAPI.get_dataset_sample_viz_data(
         dataset.job_start.user, dataset.job_start.id
@@ -1338,7 +1352,9 @@ def get_sample_viz_data(request, dataset_id: int):
 )
 def get_file_listing(request, dataset_id: PositiveInt, page: PositiveInt = 1):
     """Proxy as WASAPI datase file listing response from ARCH."""
-    dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
+    dataset = get_object_or_404(
+        Dataset.user_queryset(request.user, include_opted_out=True), id=dataset_id
+    )
     # Request on behalf of the Dataset owner in the event of teammate access.
     res = ArchAPI.list_wasapi_files(
         dataset.job_start.user,
