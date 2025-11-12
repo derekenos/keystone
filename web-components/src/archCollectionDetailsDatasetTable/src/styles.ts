@@ -29,5 +29,9 @@ export default [
     data-table > table > thead > tr > th {
       max-width: none;
     }
+
+    data-table > table > tbody > tr.no-results > td {
+      font-weight: normal;
+    }
   `,
 ];

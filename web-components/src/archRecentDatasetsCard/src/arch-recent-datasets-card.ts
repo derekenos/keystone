@@ -42,8 +42,15 @@ export class ArchRecentDatasetsCard extends LitElement {
           ]
         : !hasDatasets
         ? [
-            html`<tr>
-              <td colspan="3"><i>New datasets will be listed here.</i></td>
+            html`<tr class="no-results">
+              <td colspan="3">
+                <i>
+                  No datasets have been generated.
+                  <a href="/datasets/generate" title="Generate a new dataset">
+                    Generate a new dataset
+                  </a>
+                </i>
+              </td>
             </tr>`,
           ]
         : datasets.map((dataset) => {

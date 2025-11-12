@@ -199,6 +199,16 @@ export class ArchCollectionsTable extends ArchDataTable<Collection> {
     this.sort = "-id";
     this.sortableColumns = [true, true, false, true, true];
     this.filterableColumns = [false, true];
+    this.noResultsMessage = createElement("i", {
+      children: [
+        "No collections found. ",
+        createElement("a", {
+          href: "https://arch-webservices.zendesk.com/hc/en-us/articles/14795196010772",
+          textContent: "Contact us",
+        }),
+        " to access collections or report an error.",
+      ],
+    });
     this.searchColumns = ["name"];
     this.searchColumnLabels = ["Name"];
     this.singleName = "Collection";

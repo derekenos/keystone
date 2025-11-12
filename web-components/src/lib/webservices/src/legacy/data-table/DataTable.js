@@ -234,9 +234,9 @@ export default class DataTable extends AngularMixin(HTMLElement) {
          */
         ["nonSelectionActions", []],
 
-        /* noResultsText is the string to display when a query returns 0 results.
+        /* noResultsMessage is a string or HTMLElement to display when a query returns 0 results.
          */
-        ["noResultsText", "No Results"],
+        ["noResultsMessage", "No Results"],
 
         /* nullString is an HTML string to use in place of a column field value.
          */
@@ -992,9 +992,9 @@ export default class DataTable extends AngularMixin(HTMLElement) {
   }
 
   showNoResultsRow() {
-    const { noResultsText } = this.props;
-    const tr = document.createElement("tr");
-    const td = createElement("td", {className: "no-results", textContent: noResultsText});
+    const { noResultsMessage } = this.props;
+    const tr = createElement("tr", { className: "no-results" });
+    const td = createElement("td", {children: [noResultsMessage]});
     td.setAttribute("colspan", this.props.columns.length + (this.props.selectable ? 1 : 0))
     tr.appendChild(td);
     this.tbody.replaceChildren(tr);
