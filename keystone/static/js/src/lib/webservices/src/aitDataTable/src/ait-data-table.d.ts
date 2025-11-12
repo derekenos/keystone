@@ -26,7 +26,7 @@ export declare class AitDataTable<RowT> extends LitElement {
     noInitialSearch: PropsT<RowT>["noInitialSearch"];
     nonSelectionActionLabels: PropsT<RowT>["nonSelectionActionLabels"];
     nonSelectionActions: PropsT<RowT>["nonSelectionActions"];
-    noResultsText: PropsT<RowT>["noResultsText"];
+    noResultsMessage: PropsT<RowT>["noResultsMessage"];
     nullString: PropsT<RowT>["nullString"];
     pageLength: PropsT<RowT>["pageLength"];
     pluralName: PropsT<RowT>["pluralName"];

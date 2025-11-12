@@ -75,6 +75,7 @@ import{i as t,_ as o,s as e,y as s,a as l}from"./chunk-query-assigned-elements.j
                     >No collections found.
                     <a
                       href="https://arch-webservices.zendesk.com/hc/en-us/articles/14795196010772"
+                      title="Contact us"
                       >Contact us</a
                     >
                     to access collections or report an error.</i

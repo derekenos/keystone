@@ -50,7 +50,7 @@ export interface DataTable<RowT> extends HTMLElement {
         noInitialSearch: boolean;
         nonSelectionActionLabels: Array<string>;
         nonSelectionActions: Array<Topics>;
-        noResultsText: string;
+        noResultsMessage: string | HTMLElement;
         nullString: string;
         pageLength: number;
         persistSearchStateInUrl: boolean;

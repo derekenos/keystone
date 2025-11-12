@@ -24,7 +24,7 @@ import{i as o}from"./chunk-query-assigned-elements.js";const r=o`#2b74a1`,t=o`#1
   a:hover {
     color: ${t};
   }
-`;o`#2991cc`,o`#fff`,o`#dce0e0`,o`#dce0e0`;const s=o`#052c65`,f=o`#2b2f32`,g=o`#0a3622`,u=o`#055160`,p=o`#664d03`,$=o`#58151c`,m=o`#495057`,h=o`#495057`,k=o`#f8d7da`,y=o`
+`;o`#2991cc`,o`#fff`,o`#dce0e0`,o`#dce0e0`;const s=o`#052c65`,g=o`#2b2f32`,f=o`#0a3622`,u=o`#055160`,p=o`#664d03`,$=o`#58151c`,m=o`#495057`,h=o`#495057`,k=o`#f8d7da`,y=o`
   :host {
     color: #222;
     font-family: "Open Sans", Helvetica, Arial, sans-serif;
@@ -187,6 +187,10 @@ import{i as o}from"./chunk-query-assigned-elements.js";const r=o`#2b74a1`,t=o`#1
     background-color: #f7f7f7;
   }
 
+  tbody > tr.no-results:hover {
+    background-color: unset;
+  }
+
   th,
   td {
     text-align: left;
@@ -225,23 +229,23 @@ import{i as o}from"./chunk-query-assigned-elements.js";const r=o`#2b74a1`,t=o`#1
   }
 
   .alert-secondary {
-    color: ${f};
+    color: ${g};
     background-color: ${o`#e2e3e5`};
     border-color: ${o`#c4c8cb`};
   }
 
   .alert-secondary a {
-    color: ${f};
+    color: ${g};
   }
 
   .alert-success {
-    color: ${g};
+    color: ${f};
     background-color: ${o`#d1e7dd`};
     border-color: ${o`#a3cfbb`};
   }
 
   .alert-success a {
-    color: ${g};
+    color: ${f};
   }
 
   .alert-info {
