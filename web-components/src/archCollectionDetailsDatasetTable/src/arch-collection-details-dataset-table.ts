@@ -17,6 +17,7 @@ import Styles from "./styles";
 export class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
   @property({ type: Number }) collectionId!: number;
   @property({ type: Boolean }) isOptedOutCollection = false;
+  @property({ type: Boolean }) isEmptyCollection = false;
 
   @state() columnNameHeaderTooltipMap = {
     category:
@@ -51,7 +52,7 @@ export class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
   willUpdate(_changedProperties: PropertyValues) {
     super.willUpdate(_changedProperties);
 
-    const { isOptedOutCollection } = this;
+    const { isEmptyCollection, isOptedOutCollection } = this;
 
     this.apiCollectionEndpoint = "/datasets";
     this.apiItemResponseIsArray = true;
@@ -94,28 +95,32 @@ export class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
       "Finished",
     ];
     this.filterableColumns = [true, true, true, true, false, false];
-    this.nonSelectionActionLabels = isOptedOutCollection
-      ? []
-      : ["Generate a New Dataset"];
-    this.nonSelectionActions = isOptedOutCollection
-      ? []
-      : [Topics.GENERATE_DATASET];
-    this.noResultsMessage = createElement("span", {
-      children: [
-        "No datasets have been generated from this collection. ",
-        isOptedOutCollection
-          ? ""
-          : createElement("a", {
-              href: `/datasets/generate?cid=${this.collectionId}`,
-              textContent: "Generate a new dataset",
-            }),
-      ],
-    });
     this.singleName = "Dataset";
     this.sort = "-start_time";
     this.sortableColumns = [true, true, true, true, true, true];
     this.persistSearchStateInUrl = true;
     this.pluralName = "Datasets";
+
+    // Configuration based on whether associated collection is empty or opted-out.
+    if (isEmptyCollection || isOptedOutCollection) {
+      this.nonSelectionActionLabels = [];
+      this.nonSelectionActions = [];
+      this.noResultsMessage = isEmptyCollection
+        ? "No datasets can be generated from this empty collection."
+        : "No datasets have been generated from this collection.";
+    } else {
+      this.nonSelectionActionLabels = ["Generate a New Dataset"];
+      this.nonSelectionActions = [Topics.GENERATE_DATASET];
+      this.noResultsMessage = createElement("span", {
+        children: [
+          "No datasets have been generated from this collection. ",
+          createElement("a", {
+            href: `/datasets/generate?cid=${this.collectionId}`,
+            textContent: "Generate a new dataset",
+          }),
+        ],
+      });
+    }
   }
 
   nonSelectionActionHandler(action: string) {

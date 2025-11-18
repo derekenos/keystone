@@ -6,6 +6,7 @@ from django.forms import model_to_dict
 from django.http import Http404
 from django.test import Client as _Client
 from model_bakery import baker
+from ninja.errors import HttpError
 from pytest import (
     fixture,
     mark,
@@ -20,6 +21,7 @@ from keystone.models import (
     CollectionTypes,
     Dataset,
     JobEventTypes,
+    JobType,
     Team,
     User,
     UserRoles,
@@ -83,6 +85,17 @@ class Client(_Client):
 
     def list_datasets(self, **params):
         return self.get(f"/api/datasets", params)
+
+    def generate_dataset(self, collection, job_type, params):
+        return self.post(
+            "/api/datasets/generate",
+            {
+                "collection_id": collection.id,
+                "job_type_id": job_type.id,
+                "params": params,
+            },
+            "application/json",
+        )
 
     def get_dataset(self, dataset_id):
         return self.get(f"/api/datasets/{dataset_id}")
@@ -685,6 +698,36 @@ def test_dataset_user_settings_update(make_user, make_user_dataset):
     assert pagination_response["items"][0]["id"] == dataset.id
 
 
+@mark.django_db
+@patch("keystone.arch_api.ArchAPI.generate_dataset")
+def test_generate_dataset_from_empty_custom_collection_not_allowed(
+    ArchAPI_generate_dataset, make_user, make_collection
+):
+    """A user is not allowed to generate a dataset from an empty custom collection."""
+    # Mock ArchAPI.generate_dataset() to ensure that it raises a 503 even if the ARCH
+    # backend happens to be up.
+    ArchAPI_generate_dataset.side_effect = HttpError(HTTPStatus.SERVICE_UNAVAILABLE, "")
+
+    user = make_user()
+    collection = make_collection(collection_type=CollectionTypes.CUSTOM, size_bytes=0)
+    collection.users.add(user)
+    make_generate_dataset_request = lambda: Client(user).generate_dataset(
+        collection,
+        JobType.objects.get(id=KnownArchJobUuids.DOMAIN_FREQUENCY),
+        params={"sample": False},
+    )
+    res = make_generate_dataset_request()
+    assert res.status_code == HTTPStatus.BAD_REQUEST
+    assert res.json()["detail"] == "Can not generate a dataset from an empty collection"
+
+    # Update the collection size to a non-zero value and check that the request now
+    # results in a 503 on account of the arch backend not being up.
+    collection.size_bytes = 1
+    collection.save()
+    res = make_generate_dataset_request()
+    assert res.status_code == HTTPStatus.SERVICE_UNAVAILABLE
+
+
 ###############################################################################
 # /api/collections tests
 ###############################################################################
@@ -784,3 +827,32 @@ def test_normal_user_can_not_update_nonowned_noncustom_collection(
     )
     res = Client(user).update_collection(collection, {"name": "new name"})
     assert res.status_code == HTTPStatus.FORBIDDEN
+
+
+@mark.django_db
+def test_collection_empty_filter_works(make_user, make_collection):
+    """Specify the empty=true query param should return collections with
+    size_bytes=0, whereas empty=false should return collections with both
+    >0 and None-type size_bytes values.
+    """
+    user = make_user()
+    empty_collection = make_collection(accounts=[user.account], size_bytes=0)
+    nonempty_collection = make_collection(accounts=[user.account], size_bytes=1)
+    unknown_collection = make_collection(accounts=[user.account], size_bytes=None)
+    client = Client(user)
+
+    def _get_ids_set(empty):
+        res = client.list_collections(**({"empty": empty} if empty is not None else {}))
+        assert res.status_code == HTTPStatus.OK
+        return {c["id"] for c in res.json()["items"]}
+
+    # Test empty=True.
+    assert _get_ids_set(empty=True) == {empty_collection.id}
+    # Test empty=False.
+    assert _get_ids_set(empty=False) == {nonempty_collection.id, unknown_collection.id}
+    # Test empty unspecified.
+    assert _get_ids_set(empty=None) == {
+        empty_collection.id,
+        nonempty_collection.id,
+        unknown_collection.id,
+    }

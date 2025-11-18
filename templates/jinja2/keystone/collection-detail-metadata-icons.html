@@ -8,7 +8,7 @@
 </div>
 {% endif %}
 
-{% if collection.size_bytes > 0 or collection.collection_type != "SPECIAL" %}
+{% if collection.size_bytes != None %}
 <div>
   <h3>
     {{ collection.size_bytes | filesizeformat(binary=True) }}

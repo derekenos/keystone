@@ -256,11 +256,12 @@ export default class DataTable extends AngularMixin(HTMLElement) {
          */
         ["rowClickEnabled", true],
 
-        /* rowSelectDisabledCallback is an optional function that will be invoked
-           with each row object and should return a bool indicate whether
-           selectability should be disabled for the row.
+        /* rowSelectDisabledReasonCallback is an optional function that will be invoked
+           with each row object and should return a either a string indicating why
+           selectability should be disabled for the row, or null if the row should be
+           selectable.
          */
-        ["rowSelectDisabledCallback", () => false],
+        ["rowSelectDisabledReasonCallback", () => null],
 
         /* searchColumns is an array of field specifier strings that will be
            passed via the search_fields param during a search. This array is
@@ -1028,7 +1029,7 @@ export default class DataTable extends AngularMixin(HTMLElement) {
       linkTargets,
       nullString,
       rowClickEnabled,
-      rowSelectDisabledCallback,
+      rowSelectDisabledReasonCallback,
       selectable,
     } = this.props;
 
@@ -1062,7 +1063,7 @@ export default class DataTable extends AngularMixin(HTMLElement) {
         linkTargets,
         nullString,
         selectable,
-        selectionDisabled: rowSelectDisabledCallback(row),
+        selectionDisabledReason: rowSelectDisabledReasonCallback(row),
         selected,
       };
       // Set the data-i property.

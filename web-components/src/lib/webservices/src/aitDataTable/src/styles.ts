@@ -89,7 +89,8 @@ export default [
       cursor: pointer;
     }
 
-    data-table > table > tbody > tr.unselectable {
+    data-table > table > tbody > tr.unselectable,
+    data-table > table > tbody > tr.unselectable > td.select > input {
       cursor: not-allowed;
     }
 

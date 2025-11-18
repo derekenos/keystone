@@ -52,14 +52,17 @@ export type Collection = {
   id: number;
   name: string;
   collection_type: CollectionType;
-  size_bytes: number;
+  size_bytes: null | number;
   dataset_count: number;
-  latest_dataset: {
+  latest_dataset: null | {
     id: number;
     name: string;
     start_time: Date;
   };
   metadata: CollectionMetadata;
+  // Include "empty" here so our query against this filterable field
+  // will satisfy the param key type of ApiParams<Collection>.
+  empty?: boolean;
 };
 
 export interface CollectionSettings {

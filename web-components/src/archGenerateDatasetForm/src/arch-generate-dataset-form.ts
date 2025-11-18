@@ -238,6 +238,7 @@ export class ArchGenerateDatasetForm extends LitElement {
     const response = await ArchAPI.collections.get([
       ["limit", "=", 10000],
       ["sort", "=", "name"],
+      ["empty", "=", false],
     ]);
     this.collections = response.items;
     this.collectionIdNameMap = new Map(
