@@ -1148,10 +1148,36 @@ def dataset_published_status(request, dataset_id: int):
     """Retrieve publication info for the specified Dataset"""
     dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
     # Request on behalf of the Dataset owner in the event of teammate access.
-    res = ArchAPI.get_dataset_publication_info(
-        dataset.job_start.user, dataset.job_start.id
-    )
-    return res
+    try:
+        return ArchAPI.get_dataset_publication_info(
+            dataset.job_start.user, dataset.job_start.id
+        )
+    except Http404:
+        # If ARCH reported no available publication data but we know that there's an
+        # in-progress publication job, report that instead.
+        job_start = (
+            JobStart.objects.filter(
+                parameters__conf__inputSpec__uuid=str(dataset.job_start_id)
+            )
+            .order_by("-created_at")
+            .first()
+        )
+        # If no active publication job exists, raise the Http404.
+        if not job_start:
+            raise
+        job_state, start_time, _ = job_start.get_job_status()
+        if job_state is None or JobEventTypes.is_terminal(job_state):
+            raise
+        # Return a synthetic DatasetPublicationInfo object with complete=False.
+        return {
+            "item": "",
+            "inputId": "",
+            "job": dataset.job_start.job_type.name,
+            "complete": False,
+            "sample": dataset.job_start.sample,
+            "time": start_time.isoformat(),
+            "ark": "",
+        }
 
 
 @public_api.post("/datasets/{dataset_id}/publication", response=JobStateInfo)

@@ -3,6 +3,7 @@ from http import HTTPStatus
 from unittest.mock import patch
 
 from django.forms import model_to_dict
+from django.http import Http404
 from django.test import Client as _Client
 from model_bakery import baker
 from pytest import (
@@ -18,6 +19,7 @@ from keystone.models import (
     Collection,
     CollectionTypes,
     Dataset,
+    JobEventTypes,
     Team,
     User,
     UserRoles,
@@ -91,6 +93,9 @@ class Client(_Client):
             [{"id": t.id, "name": t.name} for t in teams],
             "application/json",
         )
+
+    def get_dataset_publication_info(self, dataset_id):
+        return self.get(f"/api/datasets/{dataset_id}/publication")
 
     def list_collections(self, **params):
         return self.get("/api/collections", params)
@@ -598,6 +603,56 @@ def test_non_dataset_owner_can_not_update_teams(
     # is forbidden.
     res = Client(non_owner).update_dataset_teams(dataset.id, [team])
     assert res.status_code == HTTPStatus.FORBIDDEN
+
+
+@mark.django_db
+@patch("keystone.arch_api.ArchAPI.get_dataset_publication_info")
+def test_publication_status_reflects_internal_job_state_when_arch_404s(
+    get_dataset_publication_info,
+    make_user,
+    make_user_dataset,
+    make_jobstart,
+    make_jobevent,
+):
+    """Requests to /api/datasets/{id}/publication will respond with a synthetic
+    publication info object with complete=False if the proxied ARCH request resulted
+    in a 404 and the Keystone DB has evidence of an in-progress publication job.
+    """
+    # Patch ArchAPI.get_dataset_publication_info() to raise a Http404.
+    get_dataset_publication_info.side_effect = Http404
+    user = make_user()
+    dataset = make_user_dataset(user)
+    client = Client(user)
+
+    def _make_request():
+        return client.get_dataset_publication_info(dataset.id)
+
+    # Check that no publication info is found.
+    assert _make_request().status_code == HTTPStatus.NOT_FOUND
+    # Create a corresponding DatasetPublication JobStart.
+    js = make_jobstart(
+        user=user,
+        job_type_id=KnownArchJobUuids.DATASET_PUBLICATION,
+        parameters={"conf": {"inputSpec": {"uuid": str(dataset.job_start_id)}}},
+    )
+    # Check that publication is still not found.
+    assert _make_request().status_code == HTTPStatus.NOT_FOUND
+    # Add a SUBMITTED (i.e. non-terminal state) JobEvent.
+    make_jobevent(job_start=js, event_type=JobEventTypes.SUBMITTED)
+    # Check that a synthetic publication info object is now returned.
+    assert _make_request().json() == {
+        "item": "",
+        "inputId": "",
+        "job": dataset.job_start.job_type.name,
+        "complete": False,
+        "sample": dataset.job_start.sample,
+        "time": js.get_job_status()[1].isoformat(),
+        "ark": "",
+    }
+    # Check that the synthetic info object is no longer returned when
+    # the internal job state is terminal.
+    make_jobevent(job_start=js, event_type=JobEventTypes.CANCELLED)
+    assert _make_request().status_code == HTTPStatus.NOT_FOUND
 
 
 ###############################################################################
