@@ -883,6 +883,9 @@ def list_available_jobs(request, collection_id: Optional[int] = None):
             .user_runnable_job_types
         )
 
+    # Prefetch categories.
+    job_types_qs = job_types_qs.prefetch_related("category")
+
     # Group by category.
     job_category_job_types_map = defaultdict(list)
     for job_type in job_types_qs:
