@@ -3,11 +3,12 @@ from django.db.migrations import (
     RunPython,
 )
 
-from config.settings import GLOBAL_USER_USERNAME
+from config.settings import (
+    GLOBAL_USER_USERNAME,
+    GLOBAL_DATASETS_TEAM_NAME,
+)
 from . import ModelGetter
 
-
-GLOBAL_DATASETS_TEAM_NAME = "Global Datasets"
 
 _first_log = True
 
@@ -48,9 +49,6 @@ def share_global_datasets_via_team(apps, schema_editor):
     if not created:
         return _abort(f"'{global_datasets_team}' team already exists")
     info(f"Created '{GLOBAL_DATASETS_TEAM_NAME}' team")
-    # Ensure that the global datasets user is a member of the global datasets team.
-    global_datasets_team.members.add(global_user)
-    info(f"Added '{global_user.username}' user to '{GLOBAL_DATASETS_TEAM_NAME}' team")
     # Authorize the the team to access all existing global datasets user-owned datasets, and
     # add all users that are directly authorized (via Collection.users) to access global
     # dataset-associated collections as members of the global datasets team.
@@ -60,18 +58,11 @@ def share_global_datasets_via_team(apps, schema_editor):
     #    collection to which the user has access
     # with the caveat that the code mistakenly only ever checked for user access via
     # membership in Collection.users, but not Collection.{accounts,teams}.
-    num_authed_datasets = 0
     authed_user_ids = set()
     for dataset in models.Dataset.objects.filter(job_start__user=global_user):
-        dataset.teams.add(global_datasets_team)
-        num_authed_datasets += 1
         authed_user_ids.update(
             dataset.job_start.collection.users.values_list("id", flat=True)
         )
-    info(
-        f"Authorized '{GLOBAL_DATASETS_TEAM_NAME}' team to access {num_authed_datasets} "
-        f"'{global_user.username}' user-owned datasets"
-    )
     # Add all direct collection-authorized users as members of the global datasets team.
     global_datasets_team.members.add(*authed_user_ids)
     # Omit global_user from reported count if present.

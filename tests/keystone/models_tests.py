@@ -402,3 +402,86 @@ class TestUser:
             start_time=job_start_created_at,
             finished_time=finished_at,
         )
+
+
+class TestDataset:
+    @mark.django_db
+    def test_user_queryset_team_access(
+        self,
+        make_user,
+        make_team,
+        make_user_dataset,
+    ):
+        """A user can access a dataset that they don't own if the dataset
+        is shared with a team of which both the dataset owner and the user
+        are members.
+        """
+        # Make a dataset owner and a dataset.
+        dataset_owner = make_user()
+        dataset = make_user_dataset(dataset_owner)
+        # Create a teammate user.
+        teammate = make_user(account=dataset_owner.account)
+        # Check that the teammate can not access the dataset.
+        assert Dataset.user_queryset(teammate).count() == 0
+        # Create a team with which the dataset is shared and add the
+        # owner and the teammate as members.
+        team = make_team(account=dataset_owner.account)
+        team.members.add(dataset_owner, teammate)
+        dataset.teams.add(team)
+        # Check that the teammate now has access.
+        assert set(Dataset.user_queryset(teammate).values_list("id", flat=True)) == {
+            dataset.id
+        }
+        # Create a second team of which both the owner and teammate are members
+        # to check that being teammates of some non-dataset-associated team doesn't
+        # unexpectedly enable access during the following checks.
+        team2 = make_team(account=team.account)
+        team.members.add(dataset_owner, teammate)
+        # Remove the owner from the team and check that teammate access is lost.
+        team.members.remove(dataset_owner)
+        assert Dataset.user_queryset(teammate).count() == 0
+        # Add the owner back to the team but share the dataset and check that teammate
+        # access is lost.
+        team.members.add(dataset_owner)
+        dataset.teams.remove(team)
+        assert Dataset.user_queryset(teammate).count() == 0
+
+    @mark.django_db
+    def test_user_queryset_global_datasets_access(
+        self,
+        global_datasets_user,
+        global_datasets_team,
+        make_user,
+        make_user_dataset,
+        make_team,
+    ):
+        """A user can access a global dataset if they are a member of the "Global Datasets"
+        team and they've been directly authorized via Collection.users to access the
+        associated collection.
+        """
+        # Make a global dataset.
+        global_dataset = make_user_dataset(global_datasets_user)
+        # Create a test user.
+        user = make_user()
+        # Check that the user can not access the global dataset.
+        assert Dataset.user_queryset(user).count() == 0
+        # Add the user to the Global Datasets team and check that the user
+        # still does not have access on account of not being directly authorized
+        # to access the associated collection.
+        global_datasets_team.members.add(user)
+        assert Dataset.user_queryset(user).count() == 0
+        # Test that granting the user account and team-level collection access
+        # still don't allow access.
+        collection = global_dataset.job_start.collection
+        collection.accounts.add(user.account)
+        collection.teams.add(make_team(account=user.account))
+        assert Dataset.user_queryset(user).count() == 0
+        # Directly authorize the user via collection.users and check that they
+        # now have access.
+        collection.users.add(user)
+        assert set(Dataset.user_queryset(user).values_list("id", flat=True)) == {
+            global_dataset.id
+        }
+        # Remove the user from the Global Datasets teams and check that access is lost.
+        global_datasets_team.members.remove(user)
+        assert Dataset.user_queryset(user).count() == 0
