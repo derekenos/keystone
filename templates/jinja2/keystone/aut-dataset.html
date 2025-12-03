@@ -25,6 +25,7 @@
 
 {% block head_extra %}
 <script src="{{ static('/js/arch-dataset-teams-selector.js') }}" type="module"></script>
+<script src="{{ static('/js/arch-tooltip.js') }}" type="module"></script>
 {% if not publishing_disabled and dataset.job_start.job_type.can_publish %}
 <script src="{{ static('/js/arch-dataset-publishing-card.js') }}" type="module"></script>
 {% endif %}
@@ -146,24 +147,31 @@
             </p>
           </div>
 
-          <div class="dataset-download">
+          <div class="dataset-download-column">
             <a href="{{ url('dataset-file-download', args=[dataset.id, file.filename]) }}" download="{{ dataset.get_download_filename(file.filename) }}">
               <i class="fa fa-cloud-download fa-5x"></i>
               <p class="card-text center">Download</p>
             </a>
             {% if not colab_disabled and file.filename in settings.SUPPORTED_COLAB_JOBFILE_FILENAMES %}
+            <div class="colab-wrapper">
               {% if file.size_bytes < settings.COLAB_MAX_FILE_SIZE_BYTES %}
-            <a href="{{ url('dataset-file-colab', args=[dataset.id, file.filename]) }}" target="_blank">
-              <img style="padding-top:15px;" src="{{ static('/img/colab-badge.svg') }}" alt="Open In Colab">
-            </a>
+              <a href="{{ url('dataset-file-colab', args=[dataset.id, file.filename]) }}" target="_blank" class="colab">
+                <img src="{{ static('/img/colab-badge.svg') }}" alt="Open In Colab">
+              </a>
               {% else %}
-            <img style="padding-top:15px; cursor: not-allowed;"
-                 src="{{ static('/img/colab-badge-disabled.svg') }}"
-                 alt="disabled Google Colab badge" title="Not available currently for datasets over 1GB">
+              <img src="{{ static('/img/colab-badge-disabled.svg') }}"
+                   alt="disabled Google Colab badge"
+                   title="Not available currently for datasets over 1GB"
+              >
               {% endif %}
+              <arch-tooltip
+                header="Google Colab"
+                text="Use Google Colab to analyze and visualize this dataset."
+                learnMoreUrl="https://arch-webservices.zendesk.com/hc/en-us/articles/16748739627668-Quick-guide-to-using-ARCH#notebooks"
+              ></arch-tooltip>
+            </div>
             {% endif %}
           </div>
-
         </div>
       </div>
     </div>

@@ -32,6 +32,7 @@ export default {
     "./src/archRecentDatasetsCard/src/arch-recent-datasets-card.ts",
     "./src/archSubCollectionBuilder/src/arch-sub-collection-builder.ts",
     "./src/archTeamTable/src/arch-team-table.ts",
+    "./src/archTooltip/src/arch-tooltip.ts",
     "./src/archUserTable/src/arch-user-table.ts",
     "./src/collectionSurveyorCart/src/collection-surveyor-cart.ts",
     "./src/collectionSurveyorFacet/src/collection-surveyor-facet.ts",
