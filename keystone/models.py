@@ -680,10 +680,10 @@ class Dataset(models.Model):
         """Return a queryset that constrains access to the specified user."""
         # Include datasets which are either:
         #  - owned by the specified user
-        #  - owned by a user who is a teammate of the specified user and for
-        #    which the team is authorized to access the dataset
-        #  - owned by the global datasets user and is associated with a
-        #    collection to which the user has access
+        #  - authorized for a team of which the owner and user are both members
+        #  - owned by the global datasets user, is associated with a
+        #    collection for which the user has been directly authorized via
+        #    collection.users, and the user is a member of the Global Datasets team.
         #  AND of which the associated collection the user has not opted out
         return Dataset.objects.filter(
             Q(job_start__user=user)
@@ -691,6 +691,7 @@ class Dataset(models.Model):
             | (
                 Q(job_start__user__username=settings.GLOBAL_USER_USERNAME)
                 & Q(job_start__collection__users=user)
+                & Exists(user.teams.filter(name=settings.GLOBAL_DATASETS_TEAM_NAME))
             ),
             ~CollectionUserSettings.user_opt_out_exists_filter(
                 user,

@@ -100,6 +100,7 @@ ARCH_GLOBAL_USERNAME = env.get("KEYSTONE_ARCH_GLOBAL_USER", "arch:__global__")
 
 # Define the Keystone user we want to serve as the owner of global datasets.
 GLOBAL_USER_USERNAME = "global-datasets"
+GLOBAL_DATASETS_TEAM_NAME = "Global Datasets"
 GLOBAL_USER_ACCOUNT_NAME = GLOBAL_USER_USERNAME + "-account"
 
 # SECURITY WARNING: don't run with debug turned on in production!

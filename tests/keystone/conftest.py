@@ -4,6 +4,7 @@ from pytest import fixture
 
 from keystone import models
 from config.settings import (
+    GLOBAL_DATASETS_TEAM_NAME,
     GLOBAL_USER_USERNAME,
     GLOBAL_USER_ACCOUNT_NAME,
     KnownArchJobUuids,
@@ -141,3 +142,16 @@ def global_datasets_user(make_account, make_user):
         return models.User.objects.get(username=GLOBAL_USER_USERNAME)
     except models.User.DoesNotExist:
         return make_user(username=GLOBAL_USER_USERNAME, account=account)
+
+
+@fixture
+def global_datasets_team(global_datasets_user, make_team):
+    """Get or create the global datasets team."""
+    kwargs = {
+        "name": GLOBAL_DATASETS_TEAM_NAME,
+        "account": global_datasets_user.account,
+    }
+    try:
+        return models.Team.objects.get(**kwargs)
+    except models.Team.DoesNotExist:
+        return make_team(**kwargs)
