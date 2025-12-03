@@ -716,7 +716,7 @@ class Dataset(models.Model):
                     Q(job_start__user__username=settings.GLOBAL_USER_USERNAME)
                     & Q(job_start__collection__users=user)
                     & Exists(user.teams.filter(name=settings.GLOBAL_DATASETS_TEAM_NAME))
-                  )
+                )
             )
             # Prefetch any DatasetUserSettings instances for this dataset/user.
             # Apply order_by so that using usersettings_set.first() to retrieve any single

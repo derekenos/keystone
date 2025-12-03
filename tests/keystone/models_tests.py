@@ -487,6 +487,7 @@ class TestDataset:
         global_datasets_team.members.remove(user)
         assert Dataset.user_queryset(user).count() == 0
 
+    @mark.django_db
     def test_user_queryset_excludes_dataset_if_associated_collection_opted_out(
         self, make_user, make_user_dataset
     ):
@@ -521,6 +522,7 @@ class TestDataset:
         make_account,
         make_user,
         make_team,
+        global_datasets_team,
         global_datasets_user,
         make_user_dataset,
     ):
@@ -530,10 +532,12 @@ class TestDataset:
         """
         # Dataset.user_queryset() returns datasets that are either:
         #  - owned by the specified user
-        #  - owned by a user who is a teammate of the specified user and for
-        #    which the team is authorized to access the dataset
-        #  - owned by the global datasets user and is associated with a
-        #    collection to which the user has access
+        #  - authorized for a team of which the owner and user are both members
+        #  - owned by the global datasets user, is associated with a
+        #    collection for which the user has been directly authorized via
+        #    collection.users, and the user is a member of the Global Datasets team.
+        #  AND of which the user has not opted out
+        #  AND of which the associated collection the user has not opted out
 
         # Create a test user, a team member of that user, and the global user.
         user = make_user()
@@ -548,9 +552,11 @@ class TestDataset:
         team_member_dataset = make_user_dataset(team_member)
         # Share the team member dataset with the team.
         team_member_dataset.teams.add(team)
-        # Need to ensure that user is directly authorized via Collection.users in order
-        # for the global dataset to become visible. See comment in Dataset.user_queryset().
+        # Need to ensure that user is directly authorized via Collection.users and is
+        # a member of the Global Datasets team in order for the global dataset to become
+        # visible. See comment in Dataset.user_queryset().
         user_dataset.job_start.collection.users.add(user)
+        global_datasets_team.members.add(user)
         global_datasets_user_dataset = make_user_dataset(
             global_datasets_user, collection=user_dataset.job_start.collection
         )

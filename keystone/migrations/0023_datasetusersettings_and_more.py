@@ -7,7 +7,7 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("keystone", "0021_collectionusersettings_and_more"),
+        ("keystone", "0022_share_global_datasets_via_team"),
     ]
 
     operations = [
