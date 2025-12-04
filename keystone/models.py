@@ -343,8 +343,11 @@ class Collection(models.Model):
         if input_spec["type"] == "collection":
             return cls.objects.get(arch_id=input_spec["collectionId"])
 
-        if input_spec["type"] == "dataset" and input_spec.get("inputType") == "cdx":
-            return cls.objects.get(arch_id=f"CUSTOM-{input_spec['uuid']}")
+        if input_spec["type"] == "dataset":
+            if input_spec.get("inputType") == "cdx":
+                return cls.objects.get(arch_id=f"CUSTOM-{input_spec['uuid']}")
+            if "uuid" in input_spec:
+                return JobStart.objects.get(id=input_spec["uuid"]).collection
 
         # Try to match against a SPECIAL collection metadata.input_spec.
         special_collections = Collection.objects.filter(

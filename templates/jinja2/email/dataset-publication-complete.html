@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content='text/html; charset=UTF-8' http-equiv='Content-Type' />
+  </head>
+  <body>
+    <p>Hello {{ username }},</p>
+    <p>
+      ARCH has published the following <a href="{{ dataset_url }}">{{ dataset_type_name }}</a> dataset from the collection &quot;<a href="{{ collection_url }}">{{ collection_name }}</a>&quot;:
+    </p>
+
+    <p>
+    {% for k, vs in metadata.items() %}
+      <strong>{{ k }}</strong>:
+      {% if len(vs) == 1 %}
+      <em>{{ vs[0] }}</em>
+      <br />
+      {% else %}
+      <ul>
+        {% for v in vs %}
+        <li><em>{{ v }}</em></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    {% endfor %}
+    </p>
+
+    You can find a link to this published dataset at: <a href="{{ dataset_url }}#publishing">{{ dataset_url }}#publishing</a>
+
+    <p>
+      Best,
+      <br />
+      The ARCH team
+    </p>
+    <p>
+      Having trouble? <a href="{{ support_url }}">Let us know!</a>
+    </p>
+  </body>
+</html>
