@@ -1,9 +1,7 @@
 
 {%
   set dataset_displayname = (
-    dataset.job_start.collection.name
-    + ": "
-    + dataset.job_start.job_type.name
+    dataset.job_start.job_type.name
     + " ("
     + ("Sample, " if dataset.job_start.sample else "")
     + dataset.job_start.created_at.strftime("%Y-%m-%d %H:%M")
@@ -11,16 +9,22 @@
   )
 %}
 
+{% set collection = dataset.job_start.collection %}
+
 {% set job_params_schema = dataset.job_start.job_type.parameters_schema %}
 
-{% set breadcrumbs = (("Datasets", "datasets-explore"), (dataset_displayname, ("dataset-detail", dataset.id))) %}
+{% set breadcrumbs = (("Datasets", "datasets-explore"), (collection.name + ": " + dataset_displayname, ("dataset-detail", dataset.id))) %}
 
 {% set is_jsonl = files and (files[0].filename.endswith(".jsonl.gz") or files[0].file_type.endswith("/jsonl")) %}
 
 {% extends 'keystone/base.html' %}
 
 {% block header_title %}
-  {{ dataset_displayname }}
+<a
+  href="{{ url('collection-detail', args=(collection.id,)) }}"
+  style="font-size: inherit"
+  title="View the collection used to generate this dataset"
+>{{ collection.name }}</a>: {{ dataset_displayname }}
 {% endblock %}
 
 {% block head_extra %}
