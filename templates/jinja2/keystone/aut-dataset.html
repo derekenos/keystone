@@ -24,6 +24,7 @@
 {% endblock %}
 
 {% block head_extra %}
+<script src="{{ static('/js/arch-alert.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-dataset-teams-selector.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-dataset-settings-button.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-tooltip.js') }}" type="module"></script>
@@ -98,6 +99,18 @@
   document.addEventListener("DOMContentLoaded", () => init());
 </script>
 
+<script>
+  function initOptOutListener() {
+    // Show/hide the opted-out alert when the user opts out/in.
+    const datasetSettingsButton = document.querySelector("arch-dataset-settings-button");
+    const optedOutAlert = document.getElementById("opted-out-alert");
+    datasetSettingsButton.addEventListener("submit", () => {
+      optedOutAlert.style.display = datasetSettingsButton.settings.opt_out ? "block" : "none";
+    });
+  }
+  window.addEventListener("DOMContentLoaded", () => initOptOutListener());
+</script>
+
 <style>
  #files-wrapper {
    position: relative;
@@ -113,6 +126,10 @@
    right: 0;
    bottom: 0.3rem;
  }
+
+ #opted-out-alert {
+   display: block;
+ }
 </style>
 
 {% endblock %}
@@ -122,6 +139,13 @@
 <br>
 <div class="row">
   <div class="large-12 columns">
+    <arch-alert
+      id="opted-out-alert"
+      alert-class="info"
+      message="This dataset is currently hidden from default views. Click the &quot;Settings&quot; button and toggle the &quot;Hide&quot; option OFF to make it normally visible."
+      style="display: {{'block' if user_settings.opt_out else 'none' }}"
+      non-dismissable
+    ></arch-alert>
 
     {% if job_params_schema %}
     <h2 id="datasets">Configuration</h2>

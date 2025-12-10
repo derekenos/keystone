@@ -25,10 +25,45 @@
 
 {% block head_extra %}
 <script src="{{ static('/js/ext/jquery.min.js') }}"></script>
+<script src="{{ static('/js/arch-alert.js') }}" type="module"></script>
+<script src="{{ static('/js/arch-dataset-settings-button.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-dataset-teams-selector.js') }}" type="module"></script>
 {% if not publishing_disabled and dataset.job_start.job_type.can_publish %}
 <script src="{{ static('/js/arch-dataset-publishing-card.js') }}" type="module"></script>
 {% endif %}
+
+<style>
+ #dataset-wrapper {
+   position: relative;
+ }
+
+ #dataset-wrapper > h2 {
+   display: inline-block;
+ }
+
+ #dataset-wrapper > arch-dataset-settings-button {
+   display: inline-block;
+   position: absolute;
+   right: 0;
+   bottom: 0.3rem;
+ }
+
+ #opted-out-alert {
+   display: block;
+ }
+</style>
+
+<script>
+  function initOptOutListener() {
+    // Show/hide the opted-out alert when the user opts out/in.
+    const datasetSettingsButton = document.querySelector("arch-dataset-settings-button");
+    const optedOutAlert = document.getElementById("opted-out-alert");
+    datasetSettingsButton.addEventListener("submit", () => {
+      optedOutAlert.style.display = datasetSettingsButton.settings.opt_out ? "block" : "none";
+    });
+  }
+  window.addEventListener("DOMContentLoaded", () => initOptOutListener());
+</script>
 {% endblock %}
 
 {% block content %}
@@ -36,6 +71,13 @@
 <br>
 <div class="row">
   <div class="large-12 columns">
+    <arch-alert
+      id="opted-out-alert"
+      alert-class="info"
+      message="This dataset is currently hidden from default views. Click the &quot;Settings&quot; button and toggle the &quot;Hide&quot; option OFF to make it normally visible."
+      style="display: {{'block' if user_settings.opt_out else 'none' }}"
+      non-dismissable
+    ></arch-alert>
 
     {% if job_params_schema %}
     <h2 id="datasets">Configuration</h2>
@@ -54,7 +96,14 @@
     </div>
     {% endif %}
 
-    <h2 id="dataset">Dataset</h2>
+    <div id="dataset-wrapper">
+      <h2 id="dataset">Dataset</h2>
+      <arch-dataset-settings-button
+        datasetId="{{ dataset.id }}"
+        title="Edit dataset settings"
+        settings='{{ user_settings | tojson }}'
+      ></arch-dataset-settings-button>
+    </div>
     <p>
       {{ dataset.job_start.job_type.description }}
     </p>

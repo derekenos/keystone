@@ -22,6 +22,7 @@
 {% endblock %}
 
 {% block head_extra %}
+<script src="{{ static('/js/arch-alert.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-collection-details-dataset-table.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-contenteditable.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-collection-settings-button.js') }}" type="module"></script>
@@ -41,6 +42,10 @@
    right: 0;
    bottom: 0.3rem;
  }
+
+ #opted-out-alert {
+   margin-top: 1rem;
+ }
 </style>
 
 <script>
@@ -48,23 +53,32 @@
     // Add/remove the isOptedOutCollection property to the Datasets table when
     // the user opts out/in.
     const collectionSettingsButton = document.querySelector("arch-collection-settings-button");
+    const optedOutAlert = document.getElementById("opted-out-alert");
     const datasetsTable = document.querySelector("arch-collection-details-dataset-table");
     collectionSettingsButton.addEventListener("submit", () => {
       if (collectionSettingsButton.settings.opt_out) {
         datasetsTable.setAttribute("isOptedOutCollection", "");
+        optedOutAlert.style.display = "block";
       } else {
         datasetsTable.removeAttribute("isOptedOutCollection");
+        optedOutAlert.style.display = "none";
       }
     });
   }
   window.addEventListener("DOMContentLoaded", () => initOptOutListener());
 </script>
-
 {% endblock %}
 
 {% block content %}
 <div class="row page-tab" id="summary-tab">
   <div class="large-12 columns">
+    <arch-alert
+      id="opted-out-alert"
+      alert-class="info"
+      message="This collection is currently hidden from default views. Click the &quot;Settings&quot; button and toggle the &quot;Hide&quot; option OFF to make it normally visible."
+      non-dismissable
+      style="display: {{'block' if user_settings.opt_out else 'none' }}"
+    ></arch-alert>
     <div id="overview-wrapper">
       <h2>Overview</h2>
       <arch-collection-settings-button
