@@ -33,6 +33,10 @@
 {% endif %}
 
 <style>
+ #ars-dataset-content {
+   margin-top: 1rem;
+ }
+
  #dataset-wrapper {
    position: relative;
  }
@@ -67,9 +71,7 @@
 {% endblock %}
 
 {% block content %}
-<br>
-<br>
-<div class="row">
+<div id="ars-dataset-content" class="row">
   <div class="large-12 columns">
     <arch-alert
       id="opted-out-alert"

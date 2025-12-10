@@ -28,6 +28,10 @@
 <script src="{{ static('/js/arch-collection-settings-button.js') }}" type="module"></script>
 
 <style>
+ #collection-detail-content {
+   margin-top: 1rem;
+ }
+
  #overview-wrapper {
    position: relative;
  }
@@ -41,10 +45,6 @@
    position: absolute;
    right: 0;
    bottom: 0.3rem;
- }
-
- #opted-out-alert {
-   margin-top: 1rem;
  }
 </style>
 
@@ -70,7 +70,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="row page-tab" id="summary-tab">
+<div id="collection-detail-content" class="row page-tab">
   <div class="large-12 columns">
     <arch-alert
       id="opted-out-alert"
