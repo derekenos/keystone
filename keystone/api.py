@@ -636,6 +636,7 @@ class CollectionLimitOffsetPagination(LimitOffsetPagination):
 def list_collections(request, filters: CollectionFilterSchema = Query(...)):
     """Retrieve a user's Collections, including in-progress and finished, but
     not cancelled or failed, Custom collections."""
+    # pylint: disable=too-many-locals
     user = request.user
     # https://stackoverflow.com/a/65613047
     datasets_count_subquery = Subquery(
@@ -673,7 +674,8 @@ def list_collections(request, filters: CollectionFilterSchema = Query(...)):
     # Doing this manually here instead of in CollectionFilterSchema because the latter
     # was a pain given the need for user access.
     user_opt_out_exists_filter = CollectionUserSettings.user_opt_out_exists_filter(user)
-    if request.GET.get("opted_out") in ("true", "1"):
+    include_opted_out = request.GET.get("opted_out") in ("true", "1")
+    if include_opted_out:
         opted_out_count = None
         queryset = queryset.filter(user_opt_out_exists_filter)
     else:
@@ -686,7 +688,7 @@ def list_collections(request, filters: CollectionFilterSchema = Query(...)):
 
     # Set latest_dataset.
     ordered_datasets = list(
-        Dataset.user_queryset(user)
+        Dataset.user_queryset(user, include_opted_out_collections=include_opted_out)
         .prefetch_related("job_start")
         .prefetch_related("job_start__job_type")
         .prefetch_related("job_start__collection")
@@ -804,7 +806,9 @@ def list_datasets(request, filters: DatasetFilterSchema = Query(...)):
         # Include opted-out collections so that we can later calculate opted_out_count
         # and apply the appropriate filter based on whether the opted_out=true URL param
         # was specified.
-        Dataset.user_queryset(user, include_opted_out=True)
+        Dataset.user_queryset(
+            user, include_opted_out=True, include_opted_out_collections=True
+        )
         .prefetch_related("job_start")
         .prefetch_related("job_start__job_type")
         .prefetch_related("job_start__job_type__category")
@@ -829,13 +833,17 @@ def list_datasets(request, filters: DatasetFilterSchema = Query(...)):
     # Get the opted-out count and apply the filter.
     # Doing this manually here instead of in DatasetFilterSchema because the latter
     # was a pain given the need for user access.
-    user_opt_out_exists_filter = DatasetUserSettings.user_opt_out_exists_filter(user)
+    opt_out_filters = Q(DatasetUserSettings.user_opt_out_exists_filter(user)) | Q(
+        CollectionUserSettings.user_opt_out_exists_filter(
+            user, collection_path="job_start__collection"
+        )
+    )
     if request.GET.get("opted_out") in ("true", "1"):
         opted_out_count = None
-        queryset = queryset.filter(user_opt_out_exists_filter)
+        queryset = queryset.filter(opt_out_filters)
     else:
-        opted_out_count = queryset.filter(user_opt_out_exists_filter).count()
-        queryset = queryset.filter(~user_opt_out_exists_filter)
+        opted_out_count = queryset.filter(opt_out_filters).count()
+        queryset = queryset.exclude(opt_out_filters)
 
     return (
         apply_sort_param(request.GET.get("sort"), queryset, DatasetSchema),
@@ -858,9 +866,12 @@ def datasets_filter_values(request, field: str):
 @public_api.get("/datasets/{int:dataset_id}", response=DatasetSchema)
 def get_dataset(request, dataset_id: int):
     """Retrieve a specific Dataset"""
+    user = request.user
     return get_object_or_404(
         # Allow direct access to opted-out datasets.
-        Dataset.user_queryset(request.user, include_opted_out=True)
+        Dataset.user_queryset(
+            user, include_opted_out=True, include_opted_out_collections=True
+        )
         .prefetch_related("job_start")
         .prefetch_related("job_start__job_type")
         .prefetch_related("job_start__job_type__category")
@@ -875,7 +886,7 @@ def get_dataset(request, dataset_id: int):
         )
         .annotate(
             collection_access=Exists(
-                Collection.user_queryset(request.user).filter(
+                Collection.user_queryset(user).filter(
                     id=OuterRef("job_start__collection__id")
                 )
             )

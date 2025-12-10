@@ -352,7 +352,9 @@ def hidden_datasets(request):
 def dataset_detail(request, dataset_id):
     """Dataset detail page"""
     dataset = get_object_or_404(
-        Dataset.user_queryset(request.user, include_opted_out=True)
+        Dataset.user_queryset(
+            request.user, include_opted_out=True, include_opted_out_collections=True
+        )
         .select_related("job_start")
         .select_related("job_start__job_type")
         .select_related("job_start__user")
