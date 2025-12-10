@@ -44,25 +44,20 @@
 </style>
 
 <script>
- function initOptOutListener() {
-   // Hide/show the Datasets table when the user opts out/in.
-   const els = Object.fromEntries([
-     "arch-collection-settings-button",
-     "#datasets-table-wrapper",
-     "arch-collection-details-dataset-table",
-     "#opted-out-datasets-message"
-   ].map(selector => [selector, document.querySelector(selector)]));
-   els["arch-collection-settings-button"].addEventListener("submit", () => {
-     const opted_out = els["arch-collection-settings-button"].settings.opt_out;
-     els["#datasets-table-wrapper"].style.display = opted_out ? "none" : "block";
-     els["#opted-out-datasets-message"].style.display = opted_out ? "block" : "none";
-     // Trigger a datasets table search if it's just been made visible.
-     if (!opted_out) {
-       els["arch-collection-details-dataset-table"].dataTable.throttledDoSearch(true);
-     }
-   });
- }
- window.addEventListener("DOMContentLoaded", () => initOptOutListener());
+  function initOptOutListener() {
+    // Add/remove the isOptedOutCollection property to the Datasets table when
+    // the user opts out/in.
+    const collectionSettingsButton = document.querySelector("arch-collection-settings-button");
+    const datasetsTable = document.querySelector("arch-collection-details-dataset-table");
+    collectionSettingsButton.addEventListener("submit", () => {
+      if (collectionSettingsButton.settings.opt_out) {
+        datasetsTable.setAttribute("isOptedOutCollection", "");
+      } else {
+        datasetsTable.removeAttribute("isOptedOutCollection");
+      }
+    });
+  }
+  window.addEventListener("DOMContentLoaded", () => initOptOutListener());
 </script>
 
 {% endblock %}
@@ -162,16 +157,12 @@
 
       <div class="row">
         <div class="large-12 columns">
-          <div id="datasets-table-wrapper" style="display: {{ 'none' if user_settings.opt_out else 'block' }}">
+          <div id="datasets-table-wrapper">
             <arch-collection-details-dataset-table
               collectionId="{{ collection.id }}"
+              {{'isOptedOutCollection' if user_settings.opt_out else ''}}
             >
             </arch-collection-details-dataset-table>
-          </div>
-          <div id="opted-out-datasets-message" style="display: {{ 'block' if user_settings.opt_out else 'none' }}">
-            <em>
-              Click the "Settings" button and toggle the "Hide" option OFF to view this collection's associated datasets.
-            </em>
           </div>
         </div>
       </div>

@@ -16,6 +16,7 @@ import Styles from "./styles";
 @customElement("arch-collection-details-dataset-table")
 export class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
   @property({ type: Number }) collectionId!: number;
+  @property({ type: Boolean }) isOptedOutCollection = false;
 
   @state() columnNameHeaderTooltipMap = {
     category:
@@ -50,12 +51,19 @@ export class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
   willUpdate(_changedProperties: PropertyValues) {
     super.willUpdate(_changedProperties);
 
+    const { isOptedOutCollection } = this;
+
     this.apiCollectionEndpoint = "/datasets";
     this.apiItemResponseIsArray = true;
     this.apiItemTemplate = "/datasets?id=:id";
     this.itemPollPredicate = (item) => isActiveProcessingState(item.state);
     this.itemPollPeriodSeconds = 3;
     this.apiStaticParamPairs = [["collection_id", `${this.collectionId}`]];
+    // If user has opted-out of the associated collection, all associoated datasets are
+    // also considered opted-out, so query for those instead.
+    if (isOptedOutCollection) {
+      this.apiStaticParamPairs.push(["opted_out", "true"]);
+    }
     this.cellRenderers = [
       ArchCollectionDetailsDatasetTable.renderDatasetCell,
       (categoryName) => categoryName as Dataset["category_name"],
@@ -86,15 +94,21 @@ export class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
       "Finished",
     ];
     this.filterableColumns = [true, true, true, true, false, false];
-    this.nonSelectionActionLabels = ["Generate a New Dataset"];
-    this.nonSelectionActions = [Topics.GENERATE_DATASET];
+    this.nonSelectionActionLabels = isOptedOutCollection
+      ? []
+      : ["Generate a New Dataset"];
+    this.nonSelectionActions = isOptedOutCollection
+      ? []
+      : [Topics.GENERATE_DATASET];
     this.noResultsMessage = createElement("span", {
       children: [
         "No datasets have been generated from this collection. ",
-        createElement("a", {
-          href: `/datasets/generate?cid=${this.collectionId}`,
-          textContent: "Generate a new dataset",
-        }),
+        isOptedOutCollection
+          ? ""
+          : createElement("a", {
+              href: `/datasets/generate?cid=${this.collectionId}`,
+              textContent: "Generate a new dataset",
+            }),
       ],
     });
     this.singleName = "Dataset";
