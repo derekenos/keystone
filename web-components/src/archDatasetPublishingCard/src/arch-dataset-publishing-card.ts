@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, html, nothing } from "lit";
 import { customElement, property, state, query } from "lit/decorators.js";
 
 import ArchAPI from "../../lib/ArchAPI";
@@ -12,9 +12,12 @@ import {
   PublishedDatasetMetadataJSONSchemaProps,
   ResponseError,
 } from "../../lib/types";
+import { ArchGlobalModal } from "../../archGlobalModal/index";
 import "../../archLoadingIndicator/index";
 import "../../archDatasetMetadataForm/index";
 import { ArchDatasetMetadataForm } from "../../archDatasetMetadataForm/index";
+import { ArchModal } from "../../archModal/index";
+import "../../archModal/index";
 
 import styles from "./styles";
 import * as _metadataSchema from "../../archDatasetMetadataForm/src/schema.json";
@@ -60,13 +63,28 @@ export class ArchDatasetPublishingCard extends LitElement {
   @state() pubState: PublishState = PublishState.Loading;
   @state() pubInfo: undefined | PublishedDatasetInfo = undefined;
 
+  // Define a flag to indicate whether this component instance is the one
+  // that most recently initiated a publication attempt.
+  @state() initiatedPublication = false;
+
   @state() metadataState = MetadataState.Displaying;
   @state() metadata: undefined | PublishedDatasetMetadataApiResponse =
     undefined;
+  @state() preEditMetadata: undefined | PublishedDatasetMetadataApiResponse =
+    undefined;
 
   @query("arch-dataset-metadata-form") metadataForm!: ArchDatasetMetadataForm;
+  @query("#publish-button") publishButton!: HTMLButtonElement;
+  @query("#unpublish-confirmation-modal")
+  unpublishConfirmationModal!: ArchModal;
 
   static styles = styles;
+
+  // Set delegatesFocus=true so that we can restore focus to the publish button.
+  static shadowRootOptions = {
+    ...LitElement.shadowRootOptions,
+    delegatesFocus: true,
+  };
 
   connectedCallback() {
     super.connectedCallback();
@@ -97,13 +115,22 @@ export class ArchDatasetPublishingCard extends LitElement {
   // TODO - make this less complex
   // eslint-disable-next-line complexity
   render() {
-    const { pubState, readOnly } = this;
+    const { publishButton, pubState, readOnly } = this;
     if (pubState === PublishState.Loading) {
       return html`<arch-loading-indicator></arch-loading-indicator>`;
     }
     const { metadata } = this;
     const pubInfo = this.pubInfo as PublishedDatasetInfo;
     return html`
+      <arch-modal
+        id="unpublish-confirmation-modal"
+        title="Unpublish Dataset"
+        submitButtonClass="danger"
+        submitButtonText="Unpublish"
+        content="Are you sure you want to unpublish this dataset?"
+        .elementToFocusOnClose=${publishButton}
+        @submit=${this._unpublish}
+      ></arch-modal>
       <div class="container">
         <div class="detail">
           <dl>
@@ -139,13 +166,11 @@ export class ArchDatasetPublishingCard extends LitElement {
               : "Metadata"}
             ${pubState < PublishState.Published ||
             this.metadataState === MetadataState.Editing ||
+            this.metadataState === MetadataState.Saving ||
             readOnly
               ? ""
               : html`
-                  <button
-                    class="text"
-                    @click=${() => (this.metadataState = MetadataState.Editing)}
-                  >
+                  <button class="text" @click=${this._startEditingMetadata}>
                     (edit)
                   </button>
                 `}
@@ -155,7 +180,8 @@ export class ArchDatasetPublishingCard extends LitElement {
           <div
             class="metadata-display"
             ?hidden=${pubState < PublishState.Published ||
-            this.metadataState === MetadataState.Editing}
+            this.metadataState === MetadataState.Editing ||
+            this.metadataState === MetadataState.Saving}
           >
             ${metadata === undefined
               ? html`<arch-loading-indicator></arch-loading-indicator>`
@@ -171,12 +197,18 @@ export class ArchDatasetPublishingCard extends LitElement {
                         if (!Array.isArray(values)) {
                           values = [values];
                         }
-                        return html`
-                          <div>
-                            <dt>${title}</dt>
-                            ${values.map((value) => html`<dd>${value}</dd>`)}
-                          </div>
-                        `;
+                        // Filter out empty values.
+                        values = values.filter((s) => s.length > 0);
+                        return values.length === 0
+                          ? nothing
+                          : html`
+                              <div>
+                                <dt>${title}</dt>
+                                ${values.map(
+                                  (value) => html`<dd>${value}</dd>`
+                                )}
+                              </div>
+                            `;
                       })}
                   </dl>
                 `}
@@ -189,17 +221,11 @@ export class ArchDatasetPublishingCard extends LitElement {
             this.metadataState !== MetadataState.Editing &&
             this.metadataState !== MetadataState.Saving}
           >
-            ${pubState !== PublishState.PrePublish &&
-            this.metadataState !== MetadataState.Editing &&
-            this.metadataState !== MetadataState.Saving
-              ? html``
-              : html`
-                  <arch-dataset-metadata-form
-                    .schema=${_metadataSchema}
-                    .data=${metadata ?? {}}
-                  >
-                  </arch-dataset-metadata-form>
-                `}
+            <arch-dataset-metadata-form
+              .schema=${_metadataSchema}
+              .data=${metadata ?? {}}
+            >
+            </arch-dataset-metadata-form>
             <br />
             <div
               ?hidden=${pubState === PublishState.PrePublish}
@@ -207,7 +233,7 @@ export class ArchDatasetPublishingCard extends LitElement {
             >
               <button
                 type="button"
-                @click=${() => (this.metadataState = MetadataState.Displaying)}
+                @click=${this._cancelEditingMetadata}
                 ?disabled=${this.metadataState === MetadataState.Saving}
               >
                 Cancel
@@ -238,6 +264,7 @@ export class ArchDatasetPublishingCard extends LitElement {
         </button>
 
         <button
+          id="publish-button"
           class="${pubState === PublishState.Unpublished
             ? "primary"
             : pubState === PublishState.PrePublish
@@ -247,6 +274,7 @@ export class ArchDatasetPublishingCard extends LitElement {
             : ""} ${readOnly ? "hidden" : ""}"
           ?disabled=${pubState === PublishState.Publishing ||
           pubState === PublishState.Unpublishing}
+          ?hidden=${this.metadataState !== MetadataState.Displaying}
           @click=${this._publishButtonClickHandler}
         >
           ${pubState === PublishState.Unpublished
@@ -267,9 +295,20 @@ export class ArchDatasetPublishingCard extends LitElement {
 
   private async _fetchInitialData() {
     // Fetch any existing publication info.
+    const { initiatedPublication, publishButton, pubState } = this;
     const pubInfo = await this._fetchPubInfo();
     if (!pubInfo) {
       // No publication job exists for this dataset.
+      // If prior pubState was Publishing and this component instance is the
+      // one that initiated publication, display the error modal and revert state
+      // to pre-publish.
+      if (initiatedPublication && pubState === PublishState.Publishing) {
+        this.showErrorModal("dataset publication", publishButton);
+        this.pubState = PublishState.PrePublish;
+        // Reset the initiatedPublication flag.
+        this.initiatedPublication = false;
+        return;
+      }
       this.pubState = PublishState.Unpublished;
       this.metadata = {};
       return;
@@ -327,6 +366,7 @@ export class ArchDatasetPublishingCard extends LitElement {
   }
 
   private _publishButtonClickHandler() {
+    const { unpublishConfirmationModal } = this;
     const metadataForm = this.metadataForm;
     switch (this.pubState) {
       case PublishState.Unpublished:
@@ -340,41 +380,73 @@ export class ArchDatasetPublishingCard extends LitElement {
         }
         break;
       case PublishState.Published:
-        if (
-          window.confirm("Are you sure you want to unpublish this dataset?")
-        ) {
-          void this._unpublish();
-        }
+        unpublishConfirmationModal.open = true;
         break;
     }
   }
 
+  private showErrorModal(action: string, onCloseFocusEl: HTMLElement) {
+    ArchGlobalModal.showError(
+      "",
+      `An error occurred during ${action}. Please try again`,
+      onCloseFocusEl
+    );
+  }
+
   private async _publish() {
-    const { csrfToken, datasetId, _metadataFormData: metadata } = this;
-    await fetch(`/api/datasets/${datasetId}/publication`, {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "X-CSRFToken": csrfToken },
-      mode: "cors",
-      body: JSON.stringify(metadata),
-    });
+    const {
+      csrfToken,
+      datasetId,
+      publishButton,
+      _metadataFormData: metadata,
+    } = this;
+    this.initiatedPublication = true;
     this.pubState = PublishState.Publishing;
+
+    const _revertPubStateAndShowErrorModal = () => {
+      this.pubState = PublishState.PrePublish;
+      this.showErrorModal("dataset publication", publishButton);
+    };
+
+    let res;
+    try {
+      res = await fetch(`/api/datasets/${datasetId}/publication`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "X-CSRFToken": csrfToken },
+        mode: "cors",
+        body: JSON.stringify(metadata),
+      });
+    } catch (e) {
+      _revertPubStateAndShowErrorModal();
+      throw e;
+    }
+    if (!res.ok) {
+      _revertPubStateAndShowErrorModal();
+      return;
+    }
     // Start polling for pub info after a lengthy timeout in order to
     // give the backend time to register the job.
     setTimeout(() => void this._fetchInitialData(), 30000);
   }
 
   private async _unpublish() {
-    const { datasetId } = this;
+    const { datasetId, publishButton } = this;
     this.pubState = PublishState.Unpublishing;
-    await ArchAPI.datasets.publication.unpublish(datasetId);
+    try {
+      await ArchAPI.datasets.publication.unpublish(datasetId);
+    } catch {
+      this.pubState = PublishState.Published;
+      this.showErrorModal("dataset unpublication", publishButton);
+      return;
+    }
     this.pubState = PublishState.Unpublished;
     // Call fetchInitialData to reset the component state.
     void this._fetchInitialData();
   }
 
   private async _saveMetadata() {
-    const { datasetId, _metadataFormData: metadata } = this;
+    const { datasetId, _metadataFormData: metadata, publishButton } = this;
     this.metadata = metadata;
     this.metadataState = MetadataState.Saving;
     // Add empty array values for all unspecified metadata fields in order to delete
@@ -383,10 +455,28 @@ export class ArchDatasetPublishingCard extends LitElement {
       Object.fromEntries(orderedMetadataKeys.map((k) => [k, []])),
       metadata
     ) as PublishedDatasetMetadata;
-    await ArchAPI.datasets.publication.metadata.update(
-      datasetId,
-      finalMetadata
-    );
+    try {
+      await ArchAPI.datasets.publication.metadata.update(
+        datasetId,
+        finalMetadata
+      );
+    } catch {
+      this.metadataState = MetadataState.Editing;
+      this.showErrorModal("dataset metadata update", publishButton);
+      return;
+    }
+    this.metadataState = MetadataState.Displaying;
+  }
+
+  private _startEditingMetadata() {
+    // Save a deep copy of the existing / pre-edited metadata.
+    this.preEditMetadata = structuredClone(this.metadata);
+    this.metadataState = MetadataState.Editing;
+  }
+
+  private _cancelEditingMetadata() {
+    const { preEditMetadata } = this;
+    this.metadata = preEditMetadata;
     this.metadataState = MetadataState.Displaying;
   }
 }

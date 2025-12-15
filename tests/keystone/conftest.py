@@ -92,6 +92,11 @@ def make_jobstart():
 
 
 @fixture
+def make_jobevent():
+    return lambda **kwargs: maker(models.JobEvent)(**kwargs)
+
+
+@fixture
 def make_jobcomplete():
     return lambda **kwargs: maker(models.JobComplete)(**kwargs)
 
