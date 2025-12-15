@@ -45,12 +45,29 @@ def choice_constraint(field, choices):
     )
 
 
+class AccountTypes(models.TextChoices):
+    """The types of accounts"""
+
+    STAFF = "STAFF", "Staff"
+    SUBSCRIBER = "SUBSCRIBER", "Subscriber"
+    TRIAL = "TRIAL", "Trial"
+
+
 class Account(models.Model):
     """Top-level for a group of Users."""
 
     name = models.CharField(max_length=255, unique=True)
     max_users = models.PositiveIntegerField(default=10)
     created_at = models.DateTimeField(auto_now_add=True)
+    type = models.CharField(
+        choices=AccountTypes.choices, max_length=10, default=AccountTypes.TRIAL
+    )
+    is_active = models.BooleanField(default=True, blank=True)
+
+    class Meta:
+        constraints = [
+            choice_constraint(field="type", choices=AccountTypes),
+        ]
 
     def __str__(self):
         return self.name
