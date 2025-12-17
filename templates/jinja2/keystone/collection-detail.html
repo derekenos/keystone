@@ -40,6 +40,12 @@
    display: inline-block;
  }
 
+ #help-flag > img {
+   position: absolute;
+   right: 6.2rem;
+   bottom: 0.5rem;
+ }
+
  #overview-wrapper > arch-collection-settings-button {
    display: inline-block;
    position: absolute;
@@ -81,6 +87,7 @@
     ></arch-alert>
     <div id="overview-wrapper">
       <h2>Overview</h2>
+      {% include "keystone/help-flag.html" %}
       <arch-collection-settings-button
         collectionId="{{ collection.id }}"
         title="Edit collection settings"
