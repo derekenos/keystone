@@ -11,10 +11,21 @@ const SurtDomain = `(?<domain>(${ValidLabelChars}+,)+(${ValidLabelChars}+))`;
 export const SurtPrefixRegex = new RegExp(`^${SurtDomain},?$`);
 const SurtPort = "(:(?<port>\\d+))?";
 const SurtUserinfo = "(@(?<userinfo>[^\\)]+))?";
+// Valid 'pchar'characters per https://datatracker.ietf.org/doc/html/rfc3986
+// plus gen-delims for query and fragment support.
+const pcharChars = "a-zA-Z0-9.\\-_~!$&'()*+,;=:@";
+const gendelimsChars = "/?#\\[\\]"; // ":" and "@" ommitted due to inclusion in pchars
+const ValidPathnameChars = `[${pcharChars}${gendelimsChars}]`;
 export const SurtFullRegex = new RegExp(
-  ["^", SurtDomain, SurtPort, SurtUserinfo, "(\\)(?<pathname>/.*)?)", "$"].join(
-    ""
-  )
+  [
+    "^",
+    SurtDomain,
+    SurtPort,
+    SurtUserinfo,
+    `(\\)(?<pathname>/${ValidPathnameChars}*)?)`,
+    "\\s?", // Single trailing whitespace signals verbatim match to ARCH
+    "$",
+  ].join("")
 );
 
 export const BoolDisplayMap: Record<string, string> = {

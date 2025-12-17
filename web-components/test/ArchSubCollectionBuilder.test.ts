@@ -95,14 +95,7 @@ async function elInputsMapPair() {
   await el.updateComplete;
   const sourcesEl = el.form.querySelector("select[name=sources]");
   await waitUntil(() => sourcesEl.options.length === 2);
-  const inputNames = [
-    "sources",
-    "name",
-    "timestampFrom",
-    "timestampTo",
-    "statusPrefixesOR",
-    "mimesOR",
-  ];
+  const inputNames = ["sources", "name", "timestampFrom", "timestampTo"];
   return [
     el,
     Object.fromEntries(
@@ -110,6 +103,8 @@ async function elInputsMapPair() {
         .map((n) => [n, el.form.querySelector(`[name="${n}"]`)])
         .concat([
           ["surtPrefixesOR", new InputAdderProxy(el.surtPrefixInputAdder)],
+          ["statusPrefixesOR", new InputAdderProxy(el.statusInputAdder)],
+          ["mimesOR", new InputAdderProxy(el.mimeInputAdder)],
         ])
     ),
   ];
@@ -173,8 +168,8 @@ function assertInputIsInvalid(
     fullCustomValidation ||
       `Please correct the invalid value(s): ${badValsStr ?? inputValue.trim()}`
   );
-  // Do not check for presence of Error in formData for surtPrefixesOR.
-  if (inputEl.name !== "surtPrefixesOR") {
+  // Do not check for presence of Error in formData for ArchInputAdder elements.
+  if (!(inputEl instanceof InputAdderProxy)) {
     assert.instanceOf(formData[inputEl.name], Error);
   }
   // Assert that the next input event clears the custom validity state.
@@ -212,8 +207,9 @@ describe("ArchSubCollectionBuilder", () => {
           ["org,archive)/a/b?c=1"],
         ],
       ]) {
-        assertInputIsValid(el, inputEl, inputVal, decodedVal, preSendVal);
+        // Reset the InputAdder proxy.
         inputEl.reset();
+        assertInputIsValid(el, inputEl, inputVal, decodedVal, preSendVal);
       }
     });
 
@@ -242,23 +238,18 @@ describe("ArchSubCollectionBuilder", () => {
 
     it("rejects invalid single values", async () => {
       const [el, inputEl] = await elInputPair("surtPrefixesOR");
-      for (const inputVal of [
-        "org",
-        "org,",
-        "org,arch_ive", // underscore is invalid label char
-        "org,archive/",
-        "org,archive)a",
-        "https://archive.org",
-        "https://archive.org/a/b?c=1",
-        "not even trying",
+      for (const [inputVal, errorMessage] of [
+        ["org", "Please enter a valid SURT"],
+        ["org,", "Please enter a valid SURT"],
+        ["org,arch_ive", "Please enter a valid SURT"], // underscore is invalid label char
+        ["org,archive/", "Please enter a valid SURT"],
+        ["org,archive)/*", "SURT can not contain wildcard (*) character"],
+        ["org,archive)a", "Please enter a valid SURT"],
+        ["https://archive.org", "Please enter a valid SURT"],
+        ["https://archive.org/a/b?c=1", "Please enter a valid SURT"],
+        ["not even trying", "Please enter a valid SURT"],
       ]) {
-        assertInputIsInvalid(
-          el,
-          inputEl,
-          inputVal,
-          undefined,
-          "Enter a valid SURT"
-        );
+        assertInputIsInvalid(el, inputEl, inputVal, undefined, errorMessage);
       }
     });
   });
@@ -367,48 +358,23 @@ describe("ArchSubCollectionBuilder", () => {
         ["503", ["503"], [503]],
         ["599", ["599"], [599]],
       ]) {
-        assertInputIsValid(el, inputEl, inputVal, decodedVal, preSendVal);
-      }
-    });
-
-    it("accepts and decodes multiple, valid, delimited values", async () => {
-      const [el, inputEl] = await elInputPair("statusPrefixesOR");
-      for (const [inputVal, decodedVal, preSendVal] of [
-        ["100|200", ["100", "200"], [100, 200]],
-        ["302|400", ["302", "400"], [302, 400]],
-        ["404|503", ["404", "503"], [404, 503]],
-        ["599|", ["599"], [599]],
-      ]) {
+        // Reset the InputAdder proxy.
+        inputEl.reset();
         assertInputIsValid(el, inputEl, inputVal, decodedVal, preSendVal);
       }
     });
 
     it("rejects invalid single values", async () => {
       const [el, inputEl] = await elInputPair("statusPrefixesOR");
-      for (const inputVal of ["-200", "0", "99", "600", "not good"]) {
+      for (const inputVal of ["-200", "0", "99", "600"]) {
+        // Reset the InputAdder proxy.
+        inputEl.reset();
         assertInputIsInvalid(
           el,
           inputEl,
           inputVal,
           null,
-          `Please correct the invalid status code(s): ${inputVal}`
-        );
-      }
-    });
-
-    it("rejects invalid, multiple, delimited values", async () => {
-      const [el, inputEl] = await elInputPair("statusPrefixesOR");
-      for (const [inputVal, badValsStr] of [
-        ["200|99", "99"],
-        ["not good|200|300", "not good"],
-        ["not good|200|300|alsoBad|0||", "not good, alsoBad, 0"],
-      ]) {
-        assertInputIsInvalid(
-          el,
-          inputEl,
-          inputVal,
-          null,
-          `Please correct the invalid status code(s): ${badValsStr}`
+          "Please enter a valid status code in range: 100 - 599"
         );
       }
     });
@@ -438,23 +404,8 @@ describe("ArchSubCollectionBuilder", () => {
         ["text/richtext", ["text/richtext"]],
         ["video/mpeg", ["video/mpeg"]],
       ]) {
-        assertInputIsValid(
-          el,
-          inputEl,
-          inputVal,
-          decodedAndPreSendVal,
-          decodedAndPreSendVal
-        );
-      }
-    });
-
-    it("accepts and decodes multiple, valid, delimited values", async () => {
-      const [el, inputEl] = await elInputPair("mimesOR");
-      for (const [inputVal, decodedAndPreSendVal] of [
-        ["text/html|application/json", ["text/html", "application/json"]],
-        ["audio/aac|font/collection", ["audio/aac", "font/collection"]],
-        ["image/bmp|model/step", ["image/bmp", "model/step"]],
-      ]) {
+        // Reset the InputAdder proxy.
+        inputEl.reset();
         assertInputIsValid(
           el,
           inputEl,
@@ -484,32 +435,14 @@ describe("ArchSubCollectionBuilder", () => {
         "videotape/mp4",
         "video/mp4eva",
       ]) {
+        // Reset the InputAdder proxy.
+        inputEl.reset();
         assertInputIsInvalid(
           el,
           inputEl,
           inputVal,
           null,
-          `Please correct the invalid MIME(s): ${inputVal}`
-        );
-      }
-    });
-
-    it("rejects invalid, multiple, delimited values", async () => {
-      const [el, inputEl] = await elInputPair("mimesOR");
-      for (const [inputVal, badValsStr] of [
-        ["text/html|application/json|not/good", "not/good"],
-        [
-          "audio/aac|applicaton/json|font/collection|text/*",
-          "applicaton/json, text/*",
-        ],
-        ["html|image/bmp|model/step", "html"],
-      ]) {
-        assertInputIsInvalid(
-          el,
-          inputEl,
-          inputVal,
-          null,
-          `Please correct the invalid MIME(s): ${badValsStr}`
+          "Please enter a valid MIME"
         );
       }
     });
@@ -527,13 +460,15 @@ describe("ArchSubCollectionBuilder", () => {
         .map((x) => (x.selected = true));
       // Enter values for the remaining input fields.
       inputsMap.name.value = "ARCH Test Collection - HTML Only 3";
-      // The InputAdderProxy will aggregate values if you assign multiple times.
+      // The InputAdderProxy(s) will aggregate values if you assign multiple times.
       inputsMap.surtPrefixesOR.value = "org,archive";
       inputsMap.surtPrefixesOR.value = "org,archive-it";
       inputsMap.timestampFrom.value = "2023-08-15T12:00";
       inputsMap.timestampTo.value = "2023-08-16T12:00";
-      inputsMap.statusPrefixesOR.value = "200|403";
-      inputsMap.mimesOR.value = "text/html|text/css";
+      inputsMap.statusPrefixesOR.value = "200";
+      inputsMap.statusPrefixesOR.value = "403";
+      inputsMap.mimesOR.value = "text/html";
+      inputsMap.mimesOR.value = "text/css";
       // Do the submit.
       const doPostSpy = spy(el, "doPost");
       // Click the confirmation modal confirm button.
@@ -563,13 +498,15 @@ describe("ArchSubCollectionBuilder", () => {
         .map((x) => (x.selected = true));
       // Enter values for the remaining input fields.
       inputsMap.name.value = "ARCH Test Collection - HTML Only 3";
-      // The InputAdderProxy will aggregate values if you assign multiple times.
+      // The InputAdderProxy(s) will aggregate values if you assign multiple times.
       inputsMap.surtPrefixesOR.value = "org,archive";
       inputsMap.surtPrefixesOR.value = "org,archive-it";
       inputsMap.timestampFrom.value = "2023-08-15T12:00";
       inputsMap.timestampTo.value = "2023-08-16T12:00";
-      inputsMap.statusPrefixesOR.value = "200|403";
-      inputsMap.mimesOR.value = "text/html|text/css";
+      inputsMap.statusPrefixesOR.value = "200";
+      inputsMap.statusPrefixesOR.value = "403";
+      inputsMap.mimesOR.value = "text/html";
+      inputsMap.mimesOR.value = "text/css";
       // Do the submit.
       const doPostSpy = spy(el, "doPost");
       // Click the confirmation modal confirm button.

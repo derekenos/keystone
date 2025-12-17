@@ -640,6 +640,9 @@ export class ArchSubCollectionBuilder extends LitElement {
     if (!checkSurt(surtPrefix).isValid) {
       throw new Error("Please enter a valid SURT");
     }
+    if (surtPrefix.includes("*")) {
+      throw new Error("SURT can not contain wildcard (*) character");
+    }
     return surtPrefix;
   }
 
