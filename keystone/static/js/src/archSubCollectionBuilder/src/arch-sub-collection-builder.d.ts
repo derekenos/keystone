@@ -15,7 +15,7 @@ import "./arch-sub-collection-builder-submit-button";
 import { DecodedFormData, FormFieldName, FormFieldValue, ParsedFormFieldValue, PreSendValue } from "./types";
 export declare class ArchSubCollectionBuilder extends LitElement {
     csrfToken: string;
-    collections: Array<Collection>;
+    collections: undefined | Array<Collection>;
     sourceCollectionIds: Set<Collection["id"]>;
     data: undefined | DecodedFormData;
     surtPrefixExpandedPrefixesMap: Record<string, Array<string>>;
