@@ -47,6 +47,7 @@ def import_job_types():
                     download_quota_eligible=True,
                     info_url=job["infoUrl"],
                     code_url=job["codeUrl"],
+                    parameters_schema=job["paramsSchema"],
                 )
                 print(f'Imported JobType: {job_type.id} "{job_type.name}"')
             else:
@@ -59,6 +60,7 @@ def import_job_types():
                     ("can_publish", "publishable"),
                     ("info_url", "infoUrl"),
                     ("code_url", "codeUrl"),
+                    ("parameters_schema", "paramsSchema"),
                 ):
                     existing_v = getattr(job_type, job_type_k)
                     new_v = job[job_k]

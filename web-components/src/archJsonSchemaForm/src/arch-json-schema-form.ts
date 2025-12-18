@@ -305,11 +305,15 @@ export class ArchJsonSchemaForm<T> extends LitElement {
         k
       ];
 
+      // Use the title attribute, if defined, or the property name as the input element
+      // label text.
+      const propTitle = (propSchema.title ?? name) as string;
+
       // Handle a non-Array type field.
       if (!Array.isArray(value_s)) {
         return html`
           <div class="input-block">
-            <label for=${k}>${propSchema.title}</label>
+            <label for=${k}>${propTitle}</label>
             ${!propSchema.description
               ? html``
               : html`<em id="${k}-description">${propSchema.description}</em>`}
@@ -321,7 +325,7 @@ export class ArchJsonSchemaForm<T> extends LitElement {
       // Handle an Array-type field.
       return html`
         <div class="input-block">
-          <label for=${k}>${propSchema.title}</label>
+          <label for=${k}>${propTitle}</label>
           ${!propSchema.description
             ? html``
             : html`<em>${propSchema.description}</em>`}
@@ -332,7 +336,7 @@ export class ArchJsonSchemaForm<T> extends LitElement {
               propSchema.items as SomeJSONSchema,
               value as T[keyof T],
               i,
-              propSchema.title as string,
+              propTitle,
               i === value_s.length - 1
             )
           )}
