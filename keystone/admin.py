@@ -238,8 +238,11 @@ class AccountAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "name",
+        "type",
+        "is_active",
     )
     inlines = (CollectionAccountInline,)
+    list_filter = ("type", "is_active")
 
 
 @admin.register(models.Team)
