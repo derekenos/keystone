@@ -120,19 +120,11 @@
    margin-top: 1rem;
  }
 
- #files-wrapper {
-   position: relative;
- }
-
- #files-wrapper > h2 {
-   display: inline-block;
- }
-
- #files-wrapper > arch-dataset-settings-button {
+ arch-dataset-settings-button {
    display: inline-block;
    position: absolute;
-   right: 0;
-   bottom: 0.3rem;
+   /* Match `columns` class padding */
+   right: 0.9375rem;
  }
 
  #opted-out-alert {
@@ -153,8 +145,14 @@
       non-dismissable
     ></arch-alert>
 
+    <arch-dataset-settings-button
+      datasetId="{{ dataset.id }}"
+      title="Edit dataset settings"
+      settings='{{ user_settings | tojson }}'
+    ></arch-dataset-settings-button>
+
     {% if job_params_schema %}
-    <h2 id="datasets">Configuration</h2>
+    <h2 id="configuration">Configuration</h2>
     <p>
       The configuration used to generate this Dataset.
     </p>
@@ -170,14 +168,7 @@
     </div>
     {% endif %}
 
-    <div id="files-wrapper">
-      <h2 id="datasets">File(s)</h2>
-      <arch-dataset-settings-button
-        datasetId="{{ dataset.id }}"
-        title="Edit dataset settings"
-        settings='{{ user_settings | tojson }}'
-      ></arch-dataset-settings-button>
-    </div>
+    <h2 id="files">File(s)</h2>
     <p>
       {{ dataset.job_start.job_type.description }} For help and information, see: <a href="https://arch-webservices.zendesk.com/hc/en-us/articles/17137082448276" target="_blank">How to download and open ARCH datasets.</a>
     </p>

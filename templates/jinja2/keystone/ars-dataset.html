@@ -41,19 +41,11 @@
    margin-top: 1rem;
  }
 
- #dataset-wrapper {
-   position: relative;
- }
-
- #dataset-wrapper > h2 {
-   display: inline-block;
- }
-
- #dataset-wrapper > arch-dataset-settings-button {
+ arch-dataset-settings-button {
    display: inline-block;
    position: absolute;
-   right: 0;
-   bottom: 0.3rem;
+   /* Match `columns` class padding */
+   right: 0.9375rem;
  }
 
  #opted-out-alert {
@@ -85,6 +77,12 @@
       non-dismissable
     ></arch-alert>
 
+    <arch-dataset-settings-button
+      datasetId="{{ dataset.id }}"
+      title="Edit dataset settings"
+      settings='{{ user_settings | tojson }}'
+    ></arch-dataset-settings-button>
+
     {% if job_params_schema %}
     <h2 id="datasets">Configuration</h2>
     <p>
@@ -102,14 +100,7 @@
     </div>
     {% endif %}
 
-    <div id="dataset-wrapper">
-      <h2 id="dataset">Dataset</h2>
-      <arch-dataset-settings-button
-        datasetId="{{ dataset.id }}"
-        title="Edit dataset settings"
-        settings='{{ user_settings | tojson }}'
-      ></arch-dataset-settings-button>
-    </div>
+    <h2 id="dataset">Dataset</h2>
     <p>
       {{ dataset.job_start.job_type.description }}
     </p>
