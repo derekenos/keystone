@@ -753,6 +753,7 @@ def collection_dataset_states(request, collection_id: int):
     )
     datasets = (
         Dataset.user_queryset(request.user)
+        .select_related("job_start")
         .filter(
             job_start__collection_id=collection,
         )
@@ -763,7 +764,7 @@ def collection_dataset_states(request, collection_id: int):
     # I tried to use Django to do this grouping but...too....difficult...
     d = defaultdict(list)
     for dataset in datasets:
-        d[str(dataset.job_start.job_type.id)].append(
+        d[str(dataset.job_start.job_type_id)].append(
             (dataset.id, dataset.start_time, dataset.state)
         )
     return d
@@ -920,7 +921,9 @@ def list_available_jobs(request, collection_id: Optional[int] = None):
 def list_account_users(request, filters: UserFilterSchema = Query(...)):
     """Return the users that are members of the requesting ADMIN-type user's
     account."""
-    queryset = filters.filter(User.objects.filter(account=request.user.account))
+    queryset = filters.filter(
+        User.objects.filter(account=request.user.account).prefetch_related("teams")
+    )
     return apply_sort_param(request.GET.get("sort"), queryset, UserSchema)
 
 
