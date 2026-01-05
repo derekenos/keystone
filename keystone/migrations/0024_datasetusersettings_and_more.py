@@ -7,7 +7,7 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("keystone", "0022_share_global_datasets_via_team"),
+        ("keystone", "0023_account_is_active_account_type_and_more"),
     ]
 
     operations = [
