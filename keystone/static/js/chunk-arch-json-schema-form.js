@@ -209,17 +209,17 @@ import{o as e,y as t,e as r,i as o,_ as s,s as a,a as n}from"./chunk-query-assig
           +
         </button>
       </div>
-    `}render(){const{data:e,dataKeyAliasMap:r,propertiesOrder:o,schema:s}=this;if(null==e)return t``;const a=[],n=o.map((o=>{var n;const i=o;if(!Object.prototype.hasOwnProperty.call(e,i))return void a.push(i);const c=null!==(n=r[i])&&void 0!==n?n:i,l=e[o],d=s.properties[o];return Array.isArray(l)?t`
+    `}render(){const{data:e,dataKeyAliasMap:r,propertiesOrder:o,schema:s}=this;if(null==e)return t``;const a=[],n=o.map((o=>{var n,i;const c=o;if(!Object.prototype.hasOwnProperty.call(e,c))return void a.push(c);const l=null!==(n=r[c])&&void 0!==n?n:c,d=e[o],u=s.properties[o],h=null!==(i=u.title)&&void 0!==i?i:c;return Array.isArray(d)?t`
         <div class="input-block">
-          <label for=${o}>${d.title}</label>
-          ${d.description?t`<em>${d.description}</em>`:t``}
-          ${l.map(((e,t)=>this._propToInput(i,c,d.items,e,t,d.title,t===l.length-1)))}
+          <label for=${o}>${h}</label>
+          ${u.description?t`<em>${u.description}</em>`:t``}
+          ${d.map(((e,t)=>this._propToInput(c,l,u.items,e,t,h,t===d.length-1)))}
         </div>
       `:t`
           <div class="input-block">
-            <label for=${o}>${d.title}</label>
-            ${d.description?t`<em id="${o}-description">${d.description}</em>`:t``}
-            ${this._propToInput(i,c,d,l)}
+            <label for=${o}>${h}</label>
+            ${u.description?t`<em id="${o}-description">${u.description}</em>`:t``}
+            ${this._propToInput(c,l,u,d)}
           </div>
         `}));return t`
       <form>${n}</form>
