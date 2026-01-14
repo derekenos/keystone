@@ -207,8 +207,8 @@
           <div id="datasets-table-wrapper">
             <arch-collection-details-dataset-table
               collectionId="{{ collection.id }}"
-              {{ 'isOptedOutCollection' if user_settings.opt_out else '' }}
-              {{ 'isEmptyCollection' if collection.size_bytes == 0 else '' }}
+              {{ "is-opted-out-collection" if user_settings.opt_out else "" }}
+              {{ "" if can_generate_dataset else "hide-generate-dataset" }}
             >
             </arch-collection-details-dataset-table>
           </div>

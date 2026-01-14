@@ -190,12 +190,15 @@ class BasicAuth(HttpBasicAuth):
 ###############################################################################
 
 
-def require_admin(func):
-    """Route decorator to enforce user.role == ADMIN"""
+def require_active_admin(func):
+    """Route decorator to enforce that the requesting user is an admin of an
+    active account.
+    """
 
     @wraps(func)
     def wrapper(request, *args, **kwargs):
-        if request.user.role != UserRoles.ADMIN:
+        user = request.user
+        if user.role != UserRoles.ADMIN or not user.account.is_active:
             raise PermissionDenied
         return func(request, *args, **kwargs)
 
@@ -989,12 +992,21 @@ def list_available_jobs(request, collection_id: Optional[int] = None):
 
 @public_api.get("/users", response=List[UserSchema])
 @paginate
-@require_admin
+@require_active_admin
 def list_account_users(request, filters: UserFilterSchema = Query(...)):
     """Return the users that are members of the requesting ADMIN-type user's
     account."""
+    user = request.user
+    # While we infer the account ID from the requesting user itself and not from any
+    # account_id query param, if such a param was specified, ensure that it matches
+    # the requesting user's account ID.
+    try:
+        if int(request.GET.get("account_id")) != user.account_id:
+            raise PermissionDenied
+    except (TypeError, ValueError):
+        pass
     queryset = filters.filter(
-        User.objects.filter(account=request.user.account).prefetch_related("teams")
+        User.objects.filter(account=user.account).prefetch_related("teams")
     )
     return apply_sort_param(request.GET.get("sort"), queryset, UserSchema)
 
@@ -1022,7 +1034,7 @@ def get_user(request, user_id: int):
 
 
 @public_api.put("/users", response={HTTPStatus.CREATED: UserSchema})
-@require_admin
+@require_active_admin
 @transaction.atomic
 def create_user(request, payload: CreateUserSchema, send_welcome: bool):
     """Create a new User."""
@@ -1117,7 +1129,6 @@ def update_dataset(request, payload: UpdateDatasetSchema, dataset_id: int):
 def update_user(request, payload: UpdateUserSchema, user_id: int):
     """Update an existing User."""
     req_user = request.user
-    req_user_is_admin = req_user.role == UserRoles.ADMIN
     target_user = User.objects.get(id=user_id)
     # Enforce permissions.
     if not req_user.has_perm(Permissions.CHANGE_USER, target_user):
@@ -1132,7 +1143,7 @@ def update_user(request, payload: UpdateUserSchema, user_id: int):
             if k == "teams":
                 team_ids = {x["id"] for x in v}
                 if team_ids != set(target_user.teams.values_list("id", flat=True)):
-                    if req_user_is_admin:
+                    if req_user.can_admin_account(target_user.account_id):
                         target_user.teams.set(Team.objects.filter(id__in=team_ids))
                     else:
                         raise PermissionDenied(
@@ -1159,7 +1170,7 @@ def list_account_teams(request, filters: TeamFilterSchema = Query(...)):
 
 
 @public_api.put("/teams", response={HTTPStatus.CREATED: TeamSchema})
-@require_admin
+@require_active_admin
 def create_team(request, payload: CreateTeamSchema):
     """Create a new Team."""
     # Instantiate a Team for permissions testing.
@@ -1203,12 +1214,15 @@ def update_team(request, payload: UpdateTeamSchema, team_id: int):
 @public_api.post("/collections/custom", response=JobStateInfo)
 def generate_sub_collection(request, payload: SubCollectionCreationRequest):
     """Generate a sub collection"""
+    user = request.user
+    if not user.has_perm(Permissions.CREATE_CUSTOM_COLLECTION):
+        raise PermissionDenied
     # Pop data.sources, which will either be a string (for a single selection)
     # or an string[] (for multiple selections).
     job_params = {k: v for k, v in dict(payload).items() if v is not None}
     sources = job_params.pop("sources")
 
-    collections = list(Collection.user_queryset(request.user).filter(id__in=sources))
+    collections = list(Collection.user_queryset(user).filter(id__in=sources))
     if len(collections) != len(sources):
         raise HttpError(400, "Invalid collection ID(s)")
 
@@ -1219,14 +1233,17 @@ def generate_sub_collection(request, payload: SubCollectionCreationRequest):
         else MultiInputSpec(specs=[c.input_spec for c in collections])
     )
 
-    return ArchAPI.create_sub_collection(request.user, input_spec.dict(), job_params)
+    return ArchAPI.create_sub_collection(user, input_spec.dict(), job_params)
 
 
 @public_api.post("/datasets/generate", response=JobStateInfo)
 def generate_dataset(request, payload: DatasetGenerationRequest):
     """Generate a dataset"""
+    user = request.user
+    if not user.has_perm(Permissions.GENERATE_DATASET):
+        raise PermissionDenied
     collection = get_object_or_404(
-        Collection.user_queryset(request.user), id=payload.collection_id
+        Collection.user_queryset(user), id=payload.collection_id
     )
     job_type = get_object_or_404(JobType, id=payload.job_type_id)
 
@@ -1243,7 +1260,7 @@ def generate_dataset(request, payload: DatasetGenerationRequest):
     }
 
     return ArchAPI.generate_dataset(
-        request.user,
+        user,
         input_spec,
         str(job_type.id),  # Cast UUID to serializable
         payload.params.dict(),

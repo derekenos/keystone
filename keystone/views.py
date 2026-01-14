@@ -202,13 +202,33 @@ def account_teams(request):
 @login_required
 def dashboard(request):
     """Dashboard"""
-    return render(request, "keystone/dashboard.html")
+    user = request.user
+    return render(
+        request,
+        "keystone/dashboard.html",
+        context={
+            "can_create_custom_collection": user.has_perm(
+                Permissions.CREATE_CUSTOM_COLLECTION
+            ),
+            "can_generate_dataset": user.has_perm(Permissions.GENERATE_DATASET),
+        },
+    )
 
 
 @login_required
 def collections(request):
     """Collections table"""
-    return render(request, "keystone/collections.html")
+    user = request.user
+    return render(
+        request,
+        "keystone/collections.html",
+        context={
+            "can_create_custom_collection": user.has_perm(
+                Permissions.CREATE_CUSTOM_COLLECTION
+            ),
+            "can_generate_dataset": user.has_perm(Permissions.GENERATE_DATASET),
+        },
+    )
 
 
 @login_required
@@ -220,6 +240,8 @@ def hidden_collections(request):
 @login_required
 def sub_collection_builder(request):
     """Sub-Collection Builder"""
+    if not request.user.has_perm(Permissions.CREATE_CUSTOM_COLLECTION):
+        return HttpResponseNotFound()
     return render(request, "keystone/sub-collection-builder.html")
 
 
@@ -290,8 +312,9 @@ def get_special_collection_configuration_info(collection):
 @login_required
 def collection_detail(request, collection_id):
     """Collection detail view"""
+    user = request.user
     collection = get_object_or_404(
-        Collection.user_queryset(request.user, include_opted_out=True), id=collection_id
+        Collection.user_queryset(user, include_opted_out=True), id=collection_id
     )
     # Ensure that the collection's metadata is up-to-date.
     collection.refresh_metadata()
@@ -316,6 +339,9 @@ def collection_detail(request, collection_id):
         request,
         "keystone/collection-detail.html",
         context={
+            "can_generate_dataset": user.has_perm(
+                Permissions.GENERATE_DATASET, collection
+            ),
             "collection": collection,
             "configuration_info": configuration_info,
             "custom_metadata_icons_template": custom_metadata_icons_template,
@@ -334,12 +360,20 @@ def datasets(request):
 @login_required
 def datasets_explore(request):
     """Datasets explorer table"""
-    return render(request, "keystone/datasets-explore.html")
+    return render(
+        request,
+        "keystone/datasets-explore.html",
+        context={
+            "can_generate_dataset": request.user.has_perm(Permissions.GENERATE_DATASET),
+        },
+    )
 
 
 @login_required
 def datasets_generate(request):
     """Dataset generation form"""
+    if not request.user.has_perm(Permissions.GENERATE_DATASET):
+        return HttpResponseNotFound()
     return render(request, "keystone/datasets-generate.html")
 
 
@@ -385,14 +419,18 @@ def dataset_detail(request, dataset_id):
         f"keystone/{template_filename}",
         context={
             "dataset": dataset,
-            "is_owner": request.user == dataset.job_start.user,
-            "user_teams": [model_to_dict(x) for x in request.user.teams.all()],
+            "is_owner": user == dataset.job_start.user,
+            "user_teams": [model_to_dict(x) for x in user.teams.all()],
             "dataset_teams": [model_to_dict(x) for x in dataset.teams.all()],
             "files": files,
             "show_single_file_preview": len(files) == 1 and files[0].line_count > 0,
-            "colab_disabled": settings.COLAB_DISABLED,
-            "publishing_disabled": settings.PUBLISHING_DISABLED,
             "user_settings": user_settings,
+            "omit_colab": settings.COLAB_DISABLED
+            or not user.has_perm(Permissions.CREATE_NOTEBOOK),
+            "omit_publishing": settings.PUBLISHING_DISABLED,
+            "disable_publishing": not user.has_perm(
+                Permissions.PUBLISH_DATASET, dataset
+            ),
         },
     )
 
@@ -443,8 +481,11 @@ def dataset_file_download(request, dataset_id, filename):
 @login_required
 def dataset_file_colab(request, dataset_id, filename):
     """Open a Dataset file in Google Colab."""
+    user = request.user
+    if not user.has_perm(Permissions.CREATE_NOTEBOOK):
+        return HttpResponseForbidden()
     dataset = get_object_or_404(
-        Dataset.user_queryset(request.user, include_opted_out=True), id=dataset_id
+        Dataset.user_queryset(user, include_opted_out=True), id=dataset_id
     )
     job_file = get_object_or_404(
         JobFile, job_complete__job_start=dataset.job_start, filename=filename

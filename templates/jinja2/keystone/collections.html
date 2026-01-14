@@ -12,7 +12,10 @@ Collections
 {% block content %}
 <div class="row">
   <div class="card-container">
-    <arch-collections-table></arch-collections-table>
+    <arch-collections-table
+      {{ "" if can_generate_dataset else "hide-generate-dataset" }}
+      {{ "" if can_create_custom_collection else "hide-create-custom-collection" }}
+    ></arch-collections-table>
   </div>
 </div>
 {% endblock %}

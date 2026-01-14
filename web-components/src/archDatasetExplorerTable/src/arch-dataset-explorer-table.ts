@@ -15,6 +15,8 @@ import Styles from "./styles";
 @customElement("arch-dataset-explorer-table")
 export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
   @property({ type: Boolean, attribute: "show-hidden" }) showHidden = false;
+  @property({ type: Boolean, attribute: "hide-generate-dataset" })
+  hideGenerateDataset = false;
 
   @state() columnNameHeaderTooltipMap = {
     category:
@@ -87,7 +89,7 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
   willUpdate(_changedProperties: PropertyValues) {
     super.willUpdate(_changedProperties);
 
-    const { showHidden } = this;
+    const { hideGenerateDataset, showHidden } = this;
 
     this.apiCollectionEndpoint = "/datasets";
     this.apiItemResponseIsArray = true;

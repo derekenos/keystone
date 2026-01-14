@@ -161,6 +161,7 @@ export type JobIdStatesMap = Record<
 export enum UserRoles {
   ADMIN = "ADMIN",
   USER = "USER",
+  VIEWER = "VIEWER",
 }
 
 export type User = {

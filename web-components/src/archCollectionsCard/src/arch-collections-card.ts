@@ -1,5 +1,5 @@
 import { LitElement, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 
 import ArchAPI from "../../lib/ArchAPI";
 import { Collection } from "../../lib/types";
@@ -12,6 +12,9 @@ import styles from "./styles";
 
 @customElement("arch-collections-card")
 export class ArchCollectionsCard extends LitElement {
+  @property({ type: Boolean, attribute: "hide-create-custom-collection" })
+  hideCreateCustomCollection = false;
+
   @state() numTotalCollections = 0;
   @state() collections: undefined | Array<Collection> = undefined;
 
@@ -25,6 +28,7 @@ export class ArchCollectionsCard extends LitElement {
 
   render() {
     const { maxDisplayedCollections } = ArchCollectionsCard;
+    const { hideCreateCustomCollection } = this;
     const isLoading = this.collections === undefined;
     // Note that the value of hasCollection is only valid when isLoading=false;
     const hasCollections = this.numTotalCollections > 0;
@@ -78,7 +82,7 @@ export class ArchCollectionsCard extends LitElement {
     return html`
       <arch-card
         title="Collections"
-        ctatext=${!isLoading && hasCollections
+        ctatext=${!isLoading && hasCollections && !hideCreateCustomCollection
           ? "Create Custom Collection"
           : ""}
         ctahref="${Paths.buildSubCollection()}"
