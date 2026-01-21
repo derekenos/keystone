@@ -15,6 +15,7 @@ const CHUNK_FILENAME_PREFIX = "chunk-";
 export default {
   input: [
     "./src/archAlert/src/arch-alert.ts",
+    "./src/archHiddenDatasetsAlert/src/arch-hidden-datasets-alert.ts",
     "./src/archCollectionDetailsDatasetTable/src/arch-collection-details-dataset-table.ts",
     "./src/archCollectionSettingsButton/src/arch-collection-settings-button.ts",
     "./src/archCollectionsCard/src/arch-collections-card.ts",

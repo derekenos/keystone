@@ -124,11 +124,16 @@ export interface CollectionRemovedFromCartDetail {
   collectionName: string;
 }
 
+export interface DatasetSettings {
+  opt_out: boolean;
+}
+
 export type Dataset = {
   category_name: string;
   collection_access: boolean;
   collection_id: number;
   collection_name: string;
+  collection_opted_out: boolean;
   finished_time: Date;
   id: number;
   is_sample: boolean;
@@ -136,11 +141,8 @@ export type Dataset = {
   name: string;
   start_time: Date;
   state: ProcessingState;
+  user_settings: null | DatasetSettings;
 };
-
-export interface DatasetSettings {
-  opt_out: boolean;
-}
 
 export interface DatasetUpdate {
   user_settings: DatasetSettings;

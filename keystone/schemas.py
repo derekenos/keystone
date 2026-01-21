@@ -376,6 +376,7 @@ class DatasetSchema(Schema):
     collection_id: int = Field(..., alias="job_start.collection.id")
     collection_name: str = Field(..., alias="job_start.collection.name")
     collection_access: bool
+    collection_opted_out: bool
     is_sample: bool = Field(..., alias="job_start.sample")
     job_id: UUID = Field(..., alias="job_start.job_type.id")
     category_name: str = Field(..., alias="job_start.job_type.category.name")

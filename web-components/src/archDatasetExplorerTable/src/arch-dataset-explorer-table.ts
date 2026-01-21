@@ -15,6 +15,7 @@ import Styles from "./styles";
 @customElement("arch-dataset-explorer-table")
 export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
   @property({ type: Boolean, attribute: "show-hidden" }) showHidden = false;
+  @property({ type: String, attribute: "hidden-icon" }) hiddenIconUrl = "";
 
   @state() columnNameHeaderTooltipMap = {
     category:
@@ -25,31 +26,46 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
 
   static styles = [...ArchDataTable.styles, ...Styles];
 
-  static renderNameCell(
+  renderNameCell(
     name: ValueOf<Dataset>,
     dataset: Dataset
   ): string | HTMLElement {
     /*
      * Render the `Name` cell value.
      */
+    const { hiddenIconUrl, showHidden } = this;
     if (dataset.state !== ProcessingState.FINISHED) {
       return dataset.name;
     }
-    return createElement("a", {
-      href: Paths.dataset(dataset.id),
-      children: [
-        createElement("span", {
-          className: "highlightable",
-          textContent: dataset.name,
-        }),
-      ],
-    });
+    const wrapper = document.createElement("div");
+    if (showHidden && dataset.user_settings?.opt_out) {
+      wrapper.appendChild(
+        createElement("img", {
+          className: "hidden-icon",
+          src: hiddenIconUrl,
+          title: "This dataset is hidden directly via user settings",
+        })
+      );
+    }
+    wrapper.appendChild(
+      createElement("a", {
+        href: Paths.dataset(dataset.id),
+        children: [
+          createElement("span", {
+            className: "highlightable",
+            textContent: dataset.name,
+          }),
+        ],
+      })
+    );
+    return wrapper;
   }
 
-  static renderCollectionCell(
-    collectionName: ValueOf<Dataset>,
+  renderCollectionCell(
+    collectionName: Dataset["collection_name"],
     dataset: Dataset
   ): HTMLElement {
+    const { hiddenIconUrl, showHidden } = this;
     const nameEl = createElement("span", {
       className: "highlightable",
       textContent: collectionName.toString(),
@@ -61,10 +77,24 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
       return nameEl;
     }
 
-    return createElement("a", {
-      href: Paths.collection(dataset.collection_id),
-      children: [nameEl],
-    });
+    const wrapper = document.createElement("div");
+    if (showHidden && dataset.collection_opted_out) {
+      wrapper.appendChild(
+        createElement("img", {
+          className: "hidden-icon",
+          src: hiddenIconUrl,
+          title:
+            "This dataset is hidden as a result of its collection being hidden via user settings",
+        })
+      );
+    }
+    wrapper.appendChild(
+      createElement("a", {
+        href: Paths.collection(dataset.collection_id),
+        children: [nameEl],
+      })
+    );
+    return wrapper;
   }
 
   willUpdate(_changedProperties: PropertyValues) {
@@ -82,11 +112,11 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
       this.apiStaticParamPairs = [["opted_out", "true"]];
     }
     this.cellRenderers = [
-      ArchDatasetExplorerTable.renderNameCell,
+      this.renderNameCell.bind(this),
 
       (categoryName) => categoryName as Dataset["category_name"],
 
-      ArchDatasetExplorerTable.renderCollectionCell,
+      this.renderCollectionCell.bind(this),
 
       (isSample) =>
         BoolDisplayMap[(isSample as Dataset["is_sample"]).toString()],

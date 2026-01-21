@@ -1,4 +1,5 @@
 {% set breadcrumbs = (("Hidden Datasets", "hidden_datasets"),) %}
+{% set hidden_icon_url = static('/img/eye-slash-solid-full.svg') %}
 {% extends 'keystone/base.html' %}
 
 {% block header_title %}
@@ -7,10 +8,10 @@ Hidden Datasets
 
 {% block head_extra %}
   <script src="{{ static('/js/arch-dataset-explorer-table.js') }}" type="module"></script>
-  <script src="{{ static('/js/arch-alert.js') }}" type="module"></script>
+  <script src="{{ static('/js/arch-hidden-datasets-alert.js') }}" type="module"></script>
 
   <style>
-   arch-alert {
+   arch-hidden-datasets-alert {
      display: block;
      margin-top: 1rem;
    }
@@ -23,13 +24,14 @@ Hidden Datasets
 
 {% block content %}
 <div class="row">
-  <arch-alert
-    alert-class="info"
-    message="You are viewing your hidden datasets. Click each dataset's &quot;Settings&quot; button to toggle the &quot;Hide&quot; option OFF to return it to your main datasets table."
-    non-dismissable
-  ></arch-alert>
+  <arch-hidden-datasets-alert
+    hidden-icon="{{ hidden_icon_url }}"
+  ></arch-hidden-datasets-alert>
   <div class="card-container">
-    <arch-dataset-explorer-table show-hidden></arch-dataset-explorer-table>
+    <arch-dataset-explorer-table
+      show-hidden
+      hidden-icon="{{ hidden_icon_url }}"
+    ></arch-dataset-explorer-table>
   </div>
 </div>
 {% endblock %}

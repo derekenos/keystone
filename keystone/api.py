@@ -823,7 +823,7 @@ def list_datasets(request, filters: DatasetFilterSchema = Query(...)):
         )
         .annotate(
             collection_access=Exists(
-                Collection.user_queryset(user).filter(
+                Collection.user_queryset(user, include_opted_out=True).filter(
                     id=OuterRef("job_start__collection__id")
                 )
             )
@@ -833,17 +833,21 @@ def list_datasets(request, filters: DatasetFilterSchema = Query(...)):
     # Get the opted-out count and apply the filter.
     # Doing this manually here instead of in DatasetFilterSchema because the latter
     # was a pain given the need for user access.
-    opt_out_filters = Q(DatasetUserSettings.user_opt_out_exists_filter(user)) | Q(
+    dataset_opt_out_filter = Q(DatasetUserSettings.user_opt_out_exists_filter(user))
+    collection_opt_out_filter = Q(
         CollectionUserSettings.user_opt_out_exists_filter(
             user, collection_path="job_start__collection"
         )
     )
+    opt_out_filters = dataset_opt_out_filter | collection_opt_out_filter
     if request.GET.get("opted_out") in ("true", "1"):
         opted_out_count = None
         queryset = queryset.filter(opt_out_filters)
     else:
         opted_out_count = queryset.filter(opt_out_filters).count()
         queryset = queryset.exclude(opt_out_filters)
+
+    queryset = queryset.annotate(collection_opted_out=collection_opt_out_filter)
 
     return (
         apply_sort_param(request.GET.get("sort"), queryset, DatasetSchema),
@@ -888,6 +892,13 @@ def get_dataset(request, dataset_id: int):
             collection_access=Exists(
                 Collection.user_queryset(user).filter(
                     id=OuterRef("job_start__collection__id")
+                )
+            )
+        )
+        .annotate(
+            collection_opted_out=Q(
+                CollectionUserSettings.user_opt_out_exists_filter(
+                    user, collection_path="job_start__collection"
                 )
             )
         ),
