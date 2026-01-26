@@ -41,11 +41,15 @@
    margin-top: 1rem;
  }
 
- arch-dataset-settings-button {
+ #flag-and-settings {
    display: inline-block;
    position: absolute;
    /* Match `columns` class padding */
    right: 0.9375rem;
+ }
+
+ arch-dataset-settings-button {
+   display: inline-block;
  }
 
  #opted-out-alert {
@@ -77,11 +81,15 @@
       non-dismissable
     ></arch-alert>
 
-    <arch-dataset-settings-button
-      datasetId="{{ dataset.id }}"
-      title="Edit dataset settings"
-      settings='{{ user_settings | tojson }}'
-    ></arch-dataset-settings-button>
+    <div id="flag-and-settings">
+      {% include "keystone/help-flag.html" %}
+
+      <arch-dataset-settings-button
+        datasetId="{{ dataset.id }}"
+        title="Edit dataset settings"
+        settings='{{ user_settings | tojson }}'
+      ></arch-dataset-settings-button>
+    </div>
 
     {% if job_params_schema %}
     <h2 id="datasets">Configuration</h2>
