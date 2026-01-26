@@ -1,9 +1,7 @@
 
 {%
   set dataset_displayname = (
-    dataset.job_start.collection.name
-    + ": "
-    + dataset.job_start.job_type.name
+    dataset.job_start.job_type.name
     + " ("
     + ("Sample, " if dataset.job_start.sample else "")
     + dataset.job_start.created_at.strftime("%Y-%m-%d %H:%M")
@@ -11,20 +9,28 @@
   )
 %}
 
+{% set collection = dataset.job_start.collection %}
+
 {% set job_params_schema = dataset.job_start.job_type.parameters_schema %}
 
-{% set breadcrumbs = (("Datasets", "datasets-explore"), (dataset_displayname, ("dataset-detail", dataset.id))) %}
+{% set breadcrumbs = (("Datasets", "datasets-explore"), (collection.name + ": " + dataset_displayname, ("dataset-detail", dataset.id))) %}
 
 {% set is_jsonl = files and (files[0].filename.endswith(".jsonl.gz") or files[0].file_type.endswith("/jsonl")) %}
 
 {% extends 'keystone/base.html' %}
 
 {% block header_title %}
-  {{ dataset_displayname }}
+<a
+  href="{{ url('collection-detail', args=(collection.id,)) }}"
+  style="font-size: inherit"
+  title="View the collection used to generate this dataset"
+>{{ collection.name }}</a>: {{ dataset_displayname }}
 {% endblock %}
 
 {% block head_extra %}
+<script src="{{ static('/js/arch-alert.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-dataset-teams-selector.js') }}" type="module"></script>
+<script src="{{ static('/js/arch-dataset-settings-button.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-tooltip.js') }}" type="module"></script>
 {% if not publishing_disabled and dataset.job_start.job_type.can_publish %}
 <script src="{{ static('/js/arch-dataset-publishing-card.js') }}" type="module"></script>
@@ -96,16 +102,65 @@
 
   document.addEventListener("DOMContentLoaded", () => init());
 </script>
+
+<script>
+  function initOptOutListener() {
+    // Show/hide the opted-out alert when the user opts out/in.
+    const datasetSettingsButton = document.querySelector("arch-dataset-settings-button");
+    const optedOutAlert = document.getElementById("opted-out-alert");
+    datasetSettingsButton.addEventListener("submit", () => {
+      optedOutAlert.style.display = datasetSettingsButton.settings.opt_out ? "block" : "none";
+    });
+  }
+  window.addEventListener("DOMContentLoaded", () => initOptOutListener());
+</script>
+
+<style>
+ #aut-dataset-content {
+   margin-top: 1rem;
+ }
+
+ #flag-and-settings {
+   display: inline-block;
+   position: absolute;
+   /* Match `columns` class padding */
+   right: 0.9375rem;
+ }
+
+ arch-dataset-settings-button {
+   display: inline-block;
+ }
+
+ #opted-out-alert {
+   display: block;
+ }
+</style>
+
 {% endblock %}
 
 {% block content %}
-<br>
-<br>
-<div class="row">
+<div id="aut-dataset-content" class="row">
   <div class="large-12 columns">
+    <arch-alert
+      id="opted-out-alert"
+      alert-class="info"
+      message="This dataset is currently hidden from default views. Click the &quot;Settings&quot; button and toggle the &quot;Hide&quot; option OFF to make it normally visible."
+      style="display: {{'block' if user_settings.opt_out else 'none' }}"
+      non-dismissable
+    ></arch-alert>
+
+    <div id="flag-and-settings">
+      {% include "keystone/help-flag.html" %}
+
+      <arch-dataset-settings-button
+        datasetId="{{ dataset.id }}"
+        title="Edit dataset settings"
+        settings='{{ user_settings | tojson }}'
+      ></arch-dataset-settings-button>
+    </div>
 
     {% if job_params_schema %}
-    <h2 id="datasets">Configuration</h2>
+    <h2 id="configuration">Configuration</h2>
     <p>
       The configuration used to generate this Dataset.
     </p>
@@ -121,7 +176,7 @@
     </div>
     {% endif %}
 
-    <h2 id="datasets">File(s)</h2>
+    <h2 id="files">File(s)</h2>
     <p>
       {{ dataset.job_start.job_type.description }} For help and information, see: <a href="https://arch-webservices.zendesk.com/hc/en-us/articles/17137082448276" target="_blank">How to download and open ARCH datasets.</a>
     </p>

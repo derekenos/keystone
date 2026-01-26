@@ -124,11 +124,16 @@ export interface CollectionRemovedFromCartDetail {
   collectionName: string;
 }
 
+export interface DatasetSettings {
+  opt_out: boolean;
+}
+
 export type Dataset = {
   category_name: string;
   collection_access: boolean;
   collection_id: number;
   collection_name: string;
+  collection_opted_out: boolean;
   finished_time: Date;
   id: number;
   is_sample: boolean;
@@ -136,7 +141,12 @@ export type Dataset = {
   name: string;
   start_time: Date;
   state: ProcessingState;
+  user_settings: null | DatasetSettings;
 };
+
+export interface DatasetUpdate {
+  user_settings: DatasetSettings;
+}
 
 type DatasetStartTimeString = string;
 
@@ -275,6 +285,7 @@ export type PublishedDatasetMetadataJSONSchemaProps = Record<
 export type BaseFilteredApiResponse<T> = {
   count: number;
   items: T;
+  opted_out_count?: number | null;
 };
 
 type FilteredApiResults<T> = Array<T>;
@@ -284,10 +295,6 @@ type DistinctApiResults<T> = Array<T[keyof T]>;
 export type FilteredApiResponse<T> = BaseFilteredApiResponse<
   FilteredApiResults<T>
 >;
-
-export type CollectionFilteredApiResponse = FilteredApiResponse<Collection> & {
-  opted_out_count?: number | null;
-};
 
 export type DistinctApiResponse<T> = BaseFilteredApiResponse<
   DistinctApiResults<T>

@@ -46,6 +46,7 @@ urlpatterns = [
     path("datasets", views.datasets),
     path("datasets/explore", views.datasets_explore, name="datasets-explore"),
     path("datasets/generate", views.datasets_generate, name="datasets-generate"),
+    path("hidden-datasets", views.hidden_datasets, name="hidden_datasets"),
     path("datasets/<int:dataset_id>", views.dataset_detail, name="dataset-detail"),
     path(
         "datasets/<int:dataset_id>/files/<filename>/preview",

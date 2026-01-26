@@ -18,6 +18,7 @@ from keystone.models import (
     CollectionTypes,
     CollectionUserSettings,
     Dataset,
+    DatasetUserSettings,
     JobEvent,
     JobEventTypes,
     JobStatus,
@@ -485,3 +486,105 @@ class TestDataset:
         # Remove the user from the Global Datasets teams and check that access is lost.
         global_datasets_team.members.remove(user)
         assert Dataset.user_queryset(user).count() == 0
+
+    @mark.django_db
+    def test_user_queryset_excludes_dataset_if_associated_collection_opted_out(
+        self, make_user, make_user_dataset
+    ):
+        """A dataset associated with a collection for which a user has opted-out
+        will be excluded from Dataset.user_queryset().
+        """
+        user = make_user()
+        dataset1 = make_user_dataset(user)
+        dataset2 = make_user_dataset(user)
+
+        def assert_test_user_dataset_ids(ids):
+            assert set(Dataset.user_queryset(user).values_list("id", flat=True)) == ids
+
+        # Check that both datasets are visible.
+        assert_test_user_dataset_ids({dataset1.id, dataset2.id})
+
+        # Opt the user out of the dataset1-associated collection and check that that
+        # dataset is no longer available.
+        collection_user_settings = CollectionUserSettings.objects.create(
+            collection=dataset1.job_start.collection, user=user, opt_out=True
+        )
+        assert_test_user_dataset_ids({dataset2.id})
+
+        # Set opt_out=False and check that it reappears.
+        collection_user_settings.opt_out = False
+        collection_user_settings.save()
+        assert_test_user_dataset_ids({dataset1.id, dataset2.id})
+
+    @mark.django_db
+    def test_datasetusersettings_opt_out(
+        self,
+        make_account,
+        make_user,
+        make_team,
+        global_datasets_team,
+        global_datasets_user,
+        make_user_dataset,
+    ):
+        """A dataset to which a user would otherwise have access to is
+        excluded from Dataset.user_queryset() when a corresponding DatasetUserSettings
+        instance exists with opt_out=True.
+        """
+        # Dataset.user_queryset() returns datasets that are either:
+        #  - owned by the specified user
+        #  - authorized for a team of which the owner and user are both members
+        #  - owned by the global datasets user, is associated with a
+        #    collection for which the user has been directly authorized via
+        #    collection.users, and the user is a member of the Global Datasets team.
+        #  AND of which the user has not opted out
+        #  AND of which the associated collection the user has not opted out
+
+        # Create a test user, a team member of that user, and the global user.
+        user = make_user()
+        team_member = make_user(account=user.account)
+        global_datasets_user = global_datasets_user
+        team = make_team(account=user.account)
+        team.members.add(user, team_member)
+
+        # Create a dataset belonging to each user type, to which the test user
+        # will have access.
+        user_dataset = make_user_dataset(user)
+        team_member_dataset = make_user_dataset(team_member)
+        # Share the team member dataset with the team.
+        team_member_dataset.teams.add(team)
+        # Need to ensure that user is directly authorized via Collection.users and is
+        # a member of the Global Datasets team in order for the global dataset to become
+        # visible. See comment in Dataset.user_queryset().
+        user_dataset.job_start.collection.users.add(user)
+        global_datasets_team.members.add(user)
+        global_datasets_user_dataset = make_user_dataset(
+            global_datasets_user, collection=user_dataset.job_start.collection
+        )
+        all_dataset_ids = {
+            user_dataset.id,
+            team_member_dataset.id,
+            global_datasets_user_dataset.id,
+        }
+
+        def assert_test_user_dataset_ids(ids):
+            assert set(Dataset.user_queryset(user).values_list("id", flat=True)) == ids
+
+        # Check that the test user has access to all three datasets.
+        assert_test_user_dataset_ids(all_dataset_ids)
+
+        # Opt the test user out of each user dataset, check that it's omitted from
+        # Dataset.user_queryset(), then set opt_out=False and check that it reappears.
+        for dataset in (
+            user_dataset,
+            team_member_dataset,
+            global_datasets_user_dataset,
+        ):
+            dataset_user_settings = DatasetUserSettings.objects.create(
+                dataset=dataset, user=user, opt_out=True
+            )
+            # Check that all but this particular, opted-out dataset are visible.
+            assert_test_user_dataset_ids(all_dataset_ids ^ {dataset.id})
+            # Set opt_false=False and check that it reappaears.
+            dataset_user_settings.opt_out = False
+            dataset_user_settings.save()
+            assert_test_user_dataset_ids(all_dataset_ids)

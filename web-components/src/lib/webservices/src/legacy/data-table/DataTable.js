@@ -731,12 +731,12 @@ export default class DataTable extends AngularMixin(HTMLElement) {
     return row;
   }
 
-  updatePaginator() {
+  updatePaginator(customShowingEl) {
     const { singleName, pluralName } = this.props;
     const { limit, numHits, pageNum } = this.state.search;
 
     const start = (pageNum - 1) * limit + 1;
-    const showingEl = createElement("span", {
+    const showingEl = customShowingEl ?? createElement("span", {
       className: "showing",
       textContent: `${singleName} List (${numHits ? start : 0} to ${Math.min(numHits, start + limit - 1)} of ${numHits} ${pluralName})`,
     });

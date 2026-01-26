@@ -1,0 +1,37 @@
+{% set breadcrumbs = (("Hidden Datasets", "hidden_datasets"),) %}
+{% set hidden_icon_url = static('/img/eye-slash-solid-full.svg') %}
+{% extends 'keystone/base.html' %}
+
+{% block header_title %}
+Hidden Datasets
+{% endblock %}
+
+{% block head_extra %}
+  <script src="{{ static('/js/arch-dataset-explorer-table.js') }}" type="module"></script>
+  <script src="{{ static('/js/arch-hidden-datasets-alert.js') }}" type="module"></script>
+
+  <style>
+   arch-hidden-datasets-alert {
+     display: block;
+     margin-top: 1rem;
+   }
+
+   .card-container > arch-dataset-explorer-table {
+     margin-top: 0;
+   }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <arch-hidden-datasets-alert
+    hidden-icon="{{ hidden_icon_url }}"
+  ></arch-hidden-datasets-alert>
+  <div class="card-container">
+    <arch-dataset-explorer-table
+      show-hidden
+      hidden-icon="{{ hidden_icon_url }}"
+    ></arch-dataset-explorer-table>
+  </div>
+</div>
+{% endblock %}

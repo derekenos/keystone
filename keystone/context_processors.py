@@ -22,6 +22,7 @@ def settings(request):
     """A subset of (non-secret) settings values."""
     return {
         "settings": {
+            "ARCH_SUPPORT_TICKET_URL": _settings.ARCH_SUPPORT_TICKET_URL,
             "KEYSTONE_GIT_COMMIT_HASH": _settings.KEYSTONE_GIT_COMMIT_HASH,
             "COLAB_MAX_FILE_SIZE_BYTES": _settings.COLAB_MAX_FILE_SIZE_BYTES,
             "SUPPORTED_COLAB_JOBFILE_FILENAMES": _settings.SUPPORTED_COLAB_JOBFILE_FILENAMES,

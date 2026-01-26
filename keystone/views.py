@@ -35,6 +35,7 @@ from .permissions import Permissions
 from .schemas import (
     MULTI_INPUT_SPEC_TYPE,
     EmbeddedCollectionUserSettingsSchema,
+    EmbeddedDatasetUserSettingsSchema,
 )
 from .validators import validate_collection_metadata
 from .solr import SolrClient
@@ -342,10 +343,18 @@ def datasets_generate(request):
 
 
 @login_required
+def hidden_datasets(request):
+    """Hidden Datasets table"""
+    return render(request, "keystone/hidden_datasets.html")
+
+
+@login_required
 def dataset_detail(request, dataset_id):
     """Dataset detail page"""
     dataset = get_object_or_404(
-        Dataset.user_queryset(request.user)
+        Dataset.user_queryset(
+            request.user, include_opted_out=True, include_opted_out_collections=True
+        )
         .select_related("job_start")
         .select_related("job_start__job_type")
         .select_related("job_start__user")
@@ -356,6 +365,12 @@ def dataset_detail(request, dataset_id):
         dataset.job_start.job_type.id, "aut-dataset.html"
     )
     files = dataset.job_start.jobcomplete.jobfile_set.all()
+    # Get any defined user settings instance or None and validate it using
+    # EmbeddedDatasetUserSettingsSchema to get a minimal (in the case
+    # of an existing instance) or default (in the case of no existing instance) object.
+    user_settings = EmbeddedDatasetUserSettingsSchema.validate(
+        dataset.usersettings_set.first()
+    ).dict()
     return render(
         request,
         f"keystone/{template_filename}",
@@ -368,6 +383,7 @@ def dataset_detail(request, dataset_id):
             "show_single_file_preview": len(files) == 1 and files[0].line_count > 0,
             "colab_disabled": settings.COLAB_DISABLED,
             "publishing_disabled": settings.PUBLISHING_DISABLED,
+            "user_settings": user_settings,
         },
     )
 
@@ -375,7 +391,9 @@ def dataset_detail(request, dataset_id):
 @login_required
 def dataset_file_preview(request, dataset_id, filename):
     """Download a Dataset file preview."""
-    dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
+    dataset = get_object_or_404(
+        Dataset.user_queryset(request.user, include_opted_out=True), id=dataset_id
+    )
     # Request on behalf of the Dataset owner in the event of teammate access.
     return ArchAPI.proxy_file_preview_download(
         user=dataset.job_start.user,
@@ -398,7 +416,9 @@ def dataset_file_download(request, dataset_id, filename):
     else:
         # Do a non-access_key-based / potentially-logged-in-user download request.
         # Lookup the Dataset using request.user.
-        dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
+        dataset = get_object_or_404(
+            Dataset.user_queryset(request.user, include_opted_out=True), id=dataset_id
+        )
         # Request on behalf of the Dataset owner in the event of teammate access.
         user = dataset.job_start.user
 
@@ -414,7 +434,9 @@ def dataset_file_download(request, dataset_id, filename):
 @login_required
 def dataset_file_colab(request, dataset_id, filename):
     """Open a Dataset file in Google Colab."""
-    dataset = get_object_or_404(Dataset.user_queryset(request.user), id=dataset_id)
+    dataset = get_object_or_404(
+        Dataset.user_queryset(request.user, include_opted_out=True), id=dataset_id
+    )
     job_file = get_object_or_404(
         JobFile, job_complete__job_start=dataset.job_start, filename=filename
     )

@@ -34,6 +34,13 @@ export default [
       max-width: none;
     }
 
+    data-table > table > tbody > tr > td img.hidden-icon {
+      width: 1rem;
+      opacity: 0.5;
+      margin-right: 0.4rem;
+      cursor: help;
+    }
+
     data-table > table > tbody > tr.no-results > td {
       font-weight: normal;
     }

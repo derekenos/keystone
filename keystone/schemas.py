@@ -31,6 +31,7 @@ from .plugin_available_schemas import (
 )
 from .models import (
     CollectionUserSettings,
+    DatasetUserSettings,
     JobStart,
     JobEvent,
     JobEventTypes,
@@ -356,6 +357,18 @@ class CollectionFilterSchema(FilterSchema):
         ) | Q(metadata__type_displayname__in=value)
 
 
+class EmbeddedDatasetUserSettingsSchema(ModelSchema):
+    """Represents a DatasetUserSettings"""
+
+    class Config:
+        """Ninja ModelSchema configuration."""
+
+        model = DatasetUserSettings
+        model_fields = [
+            "opt_out",
+        ]
+
+
 class DatasetSchema(Schema):
     """Represents a Keystone Dataset"""
 
@@ -363,6 +376,7 @@ class DatasetSchema(Schema):
     collection_id: int = Field(..., alias="job_start.collection.id")
     collection_name: str = Field(..., alias="job_start.collection.name")
     collection_access: bool
+    collection_opted_out: bool
     is_sample: bool = Field(..., alias="job_start.sample")
     job_id: UUID = Field(..., alias="job_start.job_type.id")
     category_name: str = Field(..., alias="job_start.job_type.category.name")
@@ -371,6 +385,23 @@ class DatasetSchema(Schema):
     start_time: datetime
     finished_time: Optional[datetime]
     team_ids: List[int]
+    user_settings: Optional[EmbeddedDatasetUserSettingsSchema] = None
+
+    @staticmethod
+    def resolve_user_settings(obj):
+        """Return the first of any defined usersettings_set instance."""
+        return obj.usersettings_set.first()
+
+
+class UpdateDatasetSchema(Schema):
+    """Existing Dataset update schema"""
+
+    user_settings: EmbeddedDatasetUserSettingsSchema
+
+    class Config:
+        """Reject requests that specify additional fields."""
+
+        extra = "forbid"
 
 
 class DatasetFilterSchema(FilterSchema):

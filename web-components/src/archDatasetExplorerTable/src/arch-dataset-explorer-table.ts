@@ -1,5 +1,5 @@
 import { PropertyValues } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 
 import { ArchDataTable } from "../../archDataTable/index";
 import { BoolDisplayMap, EventTypeDisplayMap } from "../../lib/constants";
@@ -14,6 +14,9 @@ import Styles from "./styles";
 
 @customElement("arch-dataset-explorer-table")
 export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
+  @property({ type: Boolean, attribute: "show-hidden" }) showHidden = false;
+  @property({ type: String, attribute: "hidden-icon" }) hiddenIconUrl = "";
+
   @state() columnNameHeaderTooltipMap = {
     category:
       "Dataset categories are Collection, Network, Text, and File Format",
@@ -23,31 +26,46 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
 
   static styles = [...ArchDataTable.styles, ...Styles];
 
-  static renderNameCell(
+  renderNameCell(
     name: ValueOf<Dataset>,
     dataset: Dataset
   ): string | HTMLElement {
     /*
      * Render the `Name` cell value.
      */
+    const { hiddenIconUrl, showHidden } = this;
     if (dataset.state !== ProcessingState.FINISHED) {
       return dataset.name;
     }
-    return createElement("a", {
-      href: Paths.dataset(dataset.id),
-      children: [
-        createElement("span", {
-          className: "highlightable",
-          textContent: dataset.name,
-        }),
-      ],
-    });
+    const wrapper = document.createElement("div");
+    if (showHidden && dataset.user_settings?.opt_out) {
+      wrapper.appendChild(
+        createElement("img", {
+          className: "hidden-icon",
+          src: hiddenIconUrl,
+          title: "This dataset is hidden directly via user settings",
+        })
+      );
+    }
+    wrapper.appendChild(
+      createElement("a", {
+        href: Paths.dataset(dataset.id),
+        children: [
+          createElement("span", {
+            className: "highlightable",
+            textContent: dataset.name,
+          }),
+        ],
+      })
+    );
+    return wrapper;
   }
 
-  static renderCollectionCell(
-    collectionName: ValueOf<Dataset>,
+  renderCollectionCell(
+    collectionName: Dataset["collection_name"],
     dataset: Dataset
   ): HTMLElement {
+    const { hiddenIconUrl, showHidden } = this;
     const nameEl = createElement("span", {
       className: "highlightable",
       textContent: collectionName.toString(),
@@ -59,27 +77,46 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
       return nameEl;
     }
 
-    return createElement("a", {
-      href: Paths.collection(dataset.collection_id),
-      children: [nameEl],
-    });
+    const wrapper = document.createElement("div");
+    if (showHidden && dataset.collection_opted_out) {
+      wrapper.appendChild(
+        createElement("img", {
+          className: "hidden-icon",
+          src: hiddenIconUrl,
+          title:
+            "This dataset is hidden as a result of its collection being hidden via user settings",
+        })
+      );
+    }
+    wrapper.appendChild(
+      createElement("a", {
+        href: Paths.collection(dataset.collection_id),
+        children: [nameEl],
+      })
+    );
+    return wrapper;
   }
 
   willUpdate(_changedProperties: PropertyValues) {
     super.willUpdate(_changedProperties);
+
+    const { showHidden } = this;
 
     this.apiCollectionEndpoint = "/datasets";
     this.apiItemResponseIsArray = true;
     this.apiItemTemplate = "/datasets?id=:id";
     this.itemPollPredicate = (item) => isActiveProcessingState(item.state);
     this.itemPollPeriodSeconds = 3;
-    this.apiStaticParamPairs = [];
+    // Maybe show only hidden datasets.
+    if (showHidden) {
+      this.apiStaticParamPairs = [["opted_out", "true"]];
+    }
     this.cellRenderers = [
-      ArchDatasetExplorerTable.renderNameCell,
+      this.renderNameCell.bind(this),
 
       (categoryName) => categoryName as Dataset["category_name"],
 
-      ArchDatasetExplorerTable.renderCollectionCell,
+      this.renderCollectionCell.bind(this),
 
       (isSample) =>
         BoolDisplayMap[(isSample as Dataset["is_sample"]).toString()],

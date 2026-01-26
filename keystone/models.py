@@ -273,7 +273,7 @@ class Collection(models.Model):
         user has previously opted-out."""
         return (
             Collection.objects.filter(
-                Q(users=user) | Q(accounts__user=user) | Q(teams__members=user)
+                Q(users=user) | Q(accounts__id=user.account_id) | Q(teams__members=user)
             )
             # Prefetch any CollectionUserSettings instances for this collection/user.
             # Apply order_by so that using usersettings_set.first() to retrieve any single
@@ -696,28 +696,53 @@ class Dataset(models.Model):
         )
 
     @classmethod
-    def user_queryset(cls, user):
-        """Return a queryset that constrains access to the specified user."""
+    def user_queryset(
+        cls, user, include_opted_out=False, include_opted_out_collections=False
+    ):
+        """Return a queryset comprising all Datasets the user has access to.
+        If include_opted_out is specified, also include datasets for which the
+        user has previously opted-out."""
         # Include datasets which are either:
         #  - owned by the specified user
         #  - authorized for a team of which the owner and user are both members
         #  - owned by the global datasets user, is associated with a
         #    collection for which the user has been directly authorized via
         #    collection.users, and the user is a member of the Global Datasets team.
+        #  AND of which the user has not opted out
         #  AND of which the associated collection the user has not opted out
-        return Dataset.objects.filter(
-            Q(job_start__user=user)
-            | (Q(teams=F("job_start__user__teams")) & Q(teams__members=user))
-            | (
-                Q(job_start__user__username=settings.GLOBAL_USER_USERNAME)
-                & Q(job_start__collection__users=user)
-                & Exists(user.teams.filter(name=settings.GLOBAL_DATASETS_TEAM_NAME))
-            ),
-            ~CollectionUserSettings.user_opt_out_exists_filter(
-                user,
-                collection_path="job_start__collection",
-            ),
-        ).distinct()
+        exclude_clause = Q()
+        if not include_opted_out:
+            exclude_clause |= Q(DatasetUserSettings.user_opt_out_exists_filter(user))
+        if not include_opted_out_collections:
+            exclude_clause |= Q(
+                CollectionUserSettings.user_opt_out_exists_filter(
+                    user, collection_path="job_start__collection"
+                )
+            )
+        return (
+            Dataset.objects.filter(
+                Q(job_start__user=user)
+                | (Q(teams=F("job_start__user__teams")) & Q(teams__members=user))
+                | (
+                    Q(job_start__user__username=settings.GLOBAL_USER_USERNAME)
+                    & Q(job_start__collection__users=user)
+                    & Exists(user.teams.filter(name=settings.GLOBAL_DATASETS_TEAM_NAME))
+                )
+            )
+            # Prefetch any DatasetUserSettings instances for this dataset/user.
+            # Apply order_by so that using usersettings_set.first() to retrieve any single
+            # existing instance will hit the prefetch cache instead of issuing a new query.
+            .prefetch_related(
+                Prefetch(
+                    "usersettings_set",
+                    queryset=DatasetUserSettings.objects.filter(user=user).order_by(
+                        "id"
+                    ),
+                )
+            )
+            .exclude(exclude_clause)
+            .distinct()
+        )
 
     @classmethod
     def handle_job_start(cls, job_start):
@@ -742,10 +767,44 @@ class Dataset(models.Model):
         """
         match perm:
             case Permissions.VIEW_DATASET:
-                # View permissions are dictated by user_queryset().
-                return self.user_queryset(user).filter(id=self.id).exists()
+                # View permissions are dictated by user_queryset(). We'll additionally request
+                # directly and indirectly (via opted-out collection) opted-out datasets because
+                # these remain directly viewable by otherwise authorized users.
+                return (
+                    self.user_queryset(
+                        user, include_opted_out=True, include_opted_out_collections=True
+                    )
+                    .filter(id=self.id)
+                    .exists()
+                )
             case Permissions.CHANGE_DATASET_TEAMS | Permissions.PUBLISH_DATASET:
                 # A Dataset creator is allowed to change associated teams and publish.
                 return user.id == self.job_start.user_id
             case _:
                 return False
+
+
+class DatasetUserSettings(models.Model):
+    """Dataset-specific user settings."""
+
+    dataset = models.ForeignKey(
+        Dataset, on_delete=models.PROTECT, related_name="usersettings_set"
+    )
+    user = models.ForeignKey(User, on_delete=models.PROTECT)
+    opt_out = models.BooleanField(default=False, blank=True)
+
+    @classmethod
+    def user_opt_out_exists_filter(cls, user, dataset_path="pk"):
+        """Return an Exists() clause that checks for whether the specified user
+        has an opt_out=True setting for the referenced dataset.
+        """
+        return Exists(
+            cls.objects.filter(dataset=OuterRef(dataset_path), user=user, opt_out=True)
+        )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("dataset", "user"), name="datasetusersettings_unique"
+            )
+        ]

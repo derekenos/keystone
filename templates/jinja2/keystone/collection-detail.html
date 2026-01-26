@@ -22,17 +22,28 @@
 {% endblock %}
 
 {% block head_extra %}
+<script src="{{ static('/js/arch-alert.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-collection-details-dataset-table.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-contenteditable.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-collection-settings-button.js') }}" type="module"></script>
 
 <style>
+ #collection-detail-content {
+   margin-top: 1rem;
+ }
+
  #overview-wrapper {
    position: relative;
  }
 
  #overview-wrapper > h2 {
    display: inline-block;
+ }
+
+ #help-flag > img {
+   position: absolute;
+   right: 6.2rem;
+   bottom: 0.5rem;
  }
 
  #overview-wrapper > arch-collection-settings-button {
@@ -44,34 +55,39 @@
 </style>
 
 <script>
- function initOptOutListener() {
-   // Hide/show the Datasets table when the user opts out/in.
-   const els = Object.fromEntries([
-     "arch-collection-settings-button",
-     "#datasets-table-wrapper",
-     "arch-collection-details-dataset-table",
-     "#opted-out-datasets-message"
-   ].map(selector => [selector, document.querySelector(selector)]));
-   els["arch-collection-settings-button"].addEventListener("submit", () => {
-     const opted_out = els["arch-collection-settings-button"].settings.opt_out;
-     els["#datasets-table-wrapper"].style.display = opted_out ? "none" : "block";
-     els["#opted-out-datasets-message"].style.display = opted_out ? "block" : "none";
-     // Trigger a datasets table search if it's just been made visible.
-     if (!opted_out) {
-       els["arch-collection-details-dataset-table"].dataTable.throttledDoSearch(true);
-     }
-   });
- }
- window.addEventListener("DOMContentLoaded", () => initOptOutListener());
+  function initOptOutListener() {
+    // Add/remove the isOptedOutCollection property to the Datasets table when
+    // the user opts out/in.
+    const collectionSettingsButton = document.querySelector("arch-collection-settings-button");
+    const optedOutAlert = document.getElementById("opted-out-alert");
+    const datasetsTable = document.querySelector("arch-collection-details-dataset-table");
+    collectionSettingsButton.addEventListener("submit", () => {
+      if (collectionSettingsButton.settings.opt_out) {
+        datasetsTable.setAttribute("isOptedOutCollection", "");
+        optedOutAlert.style.display = "block";
+      } else {
+        datasetsTable.removeAttribute("isOptedOutCollection");
+        optedOutAlert.style.display = "none";
+      }
+    });
+  }
+  window.addEventListener("DOMContentLoaded", () => initOptOutListener());
 </script>
-
 {% endblock %}
 
 {% block content %}
-<div class="row page-tab" id="summary-tab">
+<div id="collection-detail-content" class="row page-tab">
   <div class="large-12 columns">
+    <arch-alert
+      id="opted-out-alert"
+      alert-class="info"
+      message="This collection is currently hidden from default views. Click the &quot;Settings&quot; button and toggle the &quot;Hide&quot; option OFF to make it normally visible."
+      non-dismissable
+      style="display: {{'block' if user_settings.opt_out else 'none' }}"
+    ></arch-alert>
     <div id="overview-wrapper">
       <h2>Overview</h2>
+      {% include "keystone/help-flag.html" %}
       <arch-collection-settings-button
         collectionId="{{ collection.id }}"
         title="Edit collection settings"
@@ -162,16 +178,12 @@
 
       <div class="row">
         <div class="large-12 columns">
-          <div id="datasets-table-wrapper" style="display: {{ 'none' if user_settings.opt_out else 'block' }}">
+          <div id="datasets-table-wrapper">
             <arch-collection-details-dataset-table
               collectionId="{{ collection.id }}"
+              {{'isOptedOutCollection' if user_settings.opt_out else ''}}
             >
             </arch-collection-details-dataset-table>
-          </div>
-          <div id="opted-out-datasets-message" style="display: {{ 'block' if user_settings.opt_out else 'none' }}">
-            <em>
-              Click the "Settings" button and toggle the "Hide" option OFF to view this collection's associated datasets.
-            </em>
           </div>
         </div>
       </div>
