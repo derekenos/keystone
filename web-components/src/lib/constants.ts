@@ -55,3 +55,6 @@ export const UrlCollectionParamName = "cid";
 export const UrlCollectionsParamName = "cid[]";
 
 export const DefaultSelectElementPromptText = "Please select...";
+
+export const NewHelpTicketUrl =
+  "https://arch-webservices.zendesk.com/hc/en-us/requests/new";

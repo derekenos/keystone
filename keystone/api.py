@@ -453,7 +453,8 @@ def register_job_start(request, payload: JobStartIn):
         job_type=job_type,
         collection=collection,
         user=user,
-        input_bytes=payload.input_bytes,
+        # See generate_dataset() for an explanation of the input_bytes field.
+        input_bytes=None if payload.input_bytes == -1 else payload.input_bytes,
         sample=payload.sample,
         parameters=parameters.dict(),
         commit_hash=payload.commit_hash,
@@ -1229,10 +1230,17 @@ def generate_dataset(request, payload: DatasetGenerationRequest):
     )
     job_type = get_object_or_404(JobType, id=payload.job_type_id)
 
+    # Deny a request to generate a dataset from an empty collection.
+    if collection.size_bytes == 0:
+        raise HttpError(400, "Can not generate a dataset from an empty collection")
+
     # Extend the input_spec with a "size" field that ARCH will pass back as
-    # input_bytes in the call to register_job_start. Without it, input_bytes will
-    # be reported as -1 which will cause a pydantic validation error.
-    input_spec = collection.input_spec.dict() | {"size": collection.size_bytes}
+    # input_bytes in the call to register_job_start, which can serve as a snapshot of the
+    # input collection size at the time of job run. ARCH expects this value to be of type
+    # signed long, so we'll use -1 to indicate None.
+    input_spec = collection.input_spec.dict() | {
+        "size": -1 if collection.size_bytes is None else collection.size_bytes
+    }
 
     return ArchAPI.generate_dataset(
         request.user,

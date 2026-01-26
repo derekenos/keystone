@@ -236,7 +236,7 @@ class Collection(models.Model):
     teams = models.ManyToManyField(Team, blank=True, related_name="collections")
     users = models.ManyToManyField(User, blank=True, related_name="collections")
     created_at = models.DateTimeField(auto_now_add=True)
-    size_bytes = models.PositiveBigIntegerField(default=0)
+    size_bytes = models.PositiveBigIntegerField(null=True, blank=True)
     info_url = models.URLField(null=True, blank=True)
     image = ResizedImageField(
         size=[settings.COLLECTION_IMAGE_MAX_WIDTH_PX, None], null=True, blank=True
@@ -563,7 +563,7 @@ class JobStart(models.Model):
     job_type = models.ForeignKey(JobType, on_delete=models.PROTECT)
     user = models.ForeignKey(User, on_delete=models.PROTECT)
     quotas = models.ManyToManyField(ArchQuota)
-    input_bytes = models.PositiveBigIntegerField(default=0)
+    input_bytes = models.PositiveBigIntegerField(null=True)
     sample = models.BooleanField(default=False)
     parameters = models.JSONField(null=False, blank=False)
     commit_hash = models.CharField(max_length=255)

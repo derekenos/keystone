@@ -70,7 +70,7 @@ export interface DataTable<RowT> extends HTMLElement {
     pluralName: string;
     rowClickEnabled: boolean;
     rowIdColumn: string;
-    rowSelectDisabledCallback: (row: RowT) => boolean;
+    rowSelectDisabledReasonCallback: (row: RowT) => string | null;
     searchColumns: Array<string>;
     searchColumnLabels: Array<string>;
     selectAllExtraQueryParams: Record<string, string> | null;

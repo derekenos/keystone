@@ -26,6 +26,9 @@
 <script src="{{ static('/js/arch-collection-details-dataset-table.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-contenteditable.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-collection-settings-button.js') }}" type="module"></script>
+{% if collection.size_bytes == 0 %}
+<script src="{{ static('/js/arch-empty-collection-detail-page-alert.js') }}" type="module"></script>
+{% endif %}
 
 <style>
  #collection-detail-content {
@@ -52,6 +55,11 @@
    right: 0;
    bottom: 0.3rem;
  }
+
+ #empty-alert {
+   display: block;
+   margin-top: 1rem;
+ }
 </style>
 
 <script>
@@ -60,14 +68,24 @@
     // the user opts out/in.
     const collectionSettingsButton = document.querySelector("arch-collection-settings-button");
     const optedOutAlert = document.getElementById("opted-out-alert");
+    const emptyAlert = document.getElementById("empty-alert");
     const datasetsTable = document.querySelector("arch-collection-details-dataset-table");
+    const isEmptyCollection = {{ "true" if collection.size_bytes == 0 else "false" }};
     collectionSettingsButton.addEventListener("submit", () => {
       if (collectionSettingsButton.settings.opt_out) {
         datasetsTable.setAttribute("isOptedOutCollection", "");
-        optedOutAlert.style.display = "block";
+        if (isEmptyCollection) {
+          emptyAlert.optedOut = true;
+        } else {
+          optedOutAlert.style.display = "block";
+        }
       } else {
         datasetsTable.removeAttribute("isOptedOutCollection");
-        optedOutAlert.style.display = "none";
+        if (isEmptyCollection) {
+          emptyAlert.optedOut = false;
+        } else {
+          optedOutAlert.style.display = "none";
+        }
       }
     });
   }
@@ -78,6 +96,12 @@
 {% block content %}
 <div id="collection-detail-content" class="row page-tab">
   <div class="large-12 columns">
+    {% if collection.size_bytes == 0 %}
+    <arch-empty-collection-detail-page-alert
+      id="empty-alert"
+      {{ "opted-out" if user_settings.opt_out else ""}}
+    ></arch-empty-collection-detail-page-alert>
+    {% else %}
     <arch-alert
       id="opted-out-alert"
       alert-class="info"
@@ -85,6 +109,8 @@
       non-dismissable
       style="display: {{'block' if user_settings.opt_out else 'none' }}"
     ></arch-alert>
+    {% endif %}
+
     <div id="overview-wrapper">
       <h2>Overview</h2>
       {% include "keystone/help-flag.html" %}
@@ -181,7 +207,8 @@
           <div id="datasets-table-wrapper">
             <arch-collection-details-dataset-table
               collectionId="{{ collection.id }}"
-              {{'isOptedOutCollection' if user_settings.opt_out else ''}}
+              {{ 'isOptedOutCollection' if user_settings.opt_out else '' }}
+              {{ 'isEmptyCollection' if collection.size_bytes == 0 else '' }}
             >
             </arch-collection-details-dataset-table>
           </div>

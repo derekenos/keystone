@@ -27,6 +27,7 @@ export default {
     "./src/archDatasetSettingsButton/src/arch-dataset-settings-button.ts",
     "./src/archDatasetTeamsSelector/src/arch-dataset-teams-selector.ts",
     "./src/archEditUserModal/src/arch-edit-user-modal.ts",
+    "./src/archEmptyCollectionDetailPageAlert/src/arch-empty-collection-detail-page-alert.ts",
     "./src/archGenerateDatasetForm/src/arch-generate-dataset-form.ts",
     "./src/archGlobalModal/src/arch-global-modal.ts",
     "./src/archHoverTooltip/src/arch-hover-tooltip.ts",

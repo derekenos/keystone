@@ -20,7 +20,7 @@ export default class DataTableRow extends HTMLTableRowElement {
       linkTargets,
       nullString,
       selectable,
-      selectionDisabled,
+      selectionDisabledReason,
       selected,
     } = this.props;
 
@@ -36,9 +36,9 @@ export default class DataTableRow extends HTMLTableRowElement {
     this.refs = { checkbox };
 
     // Disable and hide the selection checkbox if selection is disabled.
-    if (selectionDisabled) {
+    if (selectable && selectionDisabledReason) {
       checkbox.disabled = true;
-      checkbox.style.visibility = "hidden";
+      checkbox.title = selectionDisabledReason;
     }
 
     let colSpanSkipRemaining = 0;
@@ -78,7 +78,7 @@ export default class DataTableRow extends HTMLTableRowElement {
     }
 
     // Maybe disable selectability.
-    if (selectionDisabled) {
+    if (selectable && selectionDisabledReason) {
       this.classList.add("unselectable");
       // Prevent click events from bubbling.
       this.clickHandler = (e) => e.stopPropagation();

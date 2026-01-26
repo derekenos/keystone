@@ -349,7 +349,7 @@ export class ArchSubCollectionBuilder extends LitElement {
   }
 
   private async initCollections() {
-    const response = await ArchAPI.collections.get();
+    const response = await ArchAPI.collections.get([["empty", "=", false]]);
     this.collections = response.items.filter(isValidCustomInputCollection);
   }
 

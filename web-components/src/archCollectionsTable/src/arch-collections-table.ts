@@ -72,12 +72,12 @@ export class ArchCollectionsTable extends ArchDataTable<Collection> {
     /*
      * Render the `Latest Dataset` cell element.
      */
-    return lastJobName === null
+    return !collection.latest_dataset
       ? ""
       : createElement("a", {
           href: Paths.dataset(collection.latest_dataset.id),
-          title: lastJobName.toString(),
-          textContent: lastJobName.toString(),
+          title: lastJobName as string,
+          textContent: lastJobName as string,
         });
   }
 
@@ -150,9 +150,16 @@ export class ArchCollectionsTable extends ArchDataTable<Collection> {
       "Dataset Date",
       "Size",
     ];
-    this.rowSelectDisabledCallback = (row: Collection) => {
+    this.rowSelectDisabledReasonCallback = (row: Collection) => {
       const metadata = row.metadata as CustomCollectionMetadata;
-      return metadata?.state && isActiveProcessingState(metadata.state);
+      // Prevent selection of empty and in-progress custom collections.
+      if (row.size_bytes === 0) {
+        return "The collection is empty and can not be used as an input for any actions";
+      }
+      if (metadata?.state && isActiveProcessingState(metadata.state)) {
+        return "This custom collection is still in the process of being created";
+      }
+      return null;
     };
     this.selectable = !showHidden;
     this.sort = "-id";

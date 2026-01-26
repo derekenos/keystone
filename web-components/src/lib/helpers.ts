@@ -93,11 +93,10 @@ export function formatCollectionSize(
   collection: Collection
 ): HTMLElement | string {
   /**
-   * Return a <span> displaying "n/a" w/ title for zero-byte SPECIAL-type collections,
+   * Return a <span> displaying "n/a" w/ title for collections with size_bytes=null,
    or a human formatted byte size string otherwise.
    */
-  return collection.size_bytes === 0 &&
-    collection.collection_type === CollectionType.SPECIAL
+  return collection.size_bytes === null
     ? createElement("span", {
         textContent: "n/a",
         title:

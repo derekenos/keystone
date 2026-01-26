@@ -19,7 +19,6 @@ from ninja import (
     ModelSchema,
     Schema,
 )
-from pydantic import NonNegativeInt
 
 from .plugins import get_plugin_apps
 from .plugin_available_schemas import (
@@ -104,7 +103,7 @@ class JobStartIn(Schema):
     id: str
     job_type_id: str
     username: str
-    input_bytes: NonNegativeInt
+    input_bytes: int
     sample: bool
     parameters: JobStartInParameters
     commit_hash: str
@@ -312,7 +311,7 @@ class CollectionSchema(Schema):
     id: int
     name: str
     collection_type: str
-    size_bytes: int
+    size_bytes: Optional[int]
     dataset_count: int = 0
     latest_dataset: LatestDatasetSchema = None
     metadata: Optional[CollectionMetadata] = None
@@ -347,7 +346,18 @@ class CollectionFilterSchema(FilterSchema):
     # In order to support multiple query values for a single field,
     # use type of Optional[List[T]] and a Field q value like "...__in".
     id: Optional[List[int]] = Field(None, q="id__in")
+    empty: Optional[bool] = None
     collection_type: Optional[List[str]] = None
+
+    def filter_empty(self, value: bool) -> Q:
+        """size_bytes=0 is considered to be empty, whereas size_bytes=None is unknown
+        and size_bytes>0 is non-empty.
+        """
+        return (
+            Q(size_bytes=0)
+            if value
+            else (Q(size_bytes__isnull=True) | Q(size_bytes__gt=0))
+        )
 
     def filter_collection_type(self, value: str) -> Q:
         """If metadata.type_displayname is not defined, match on collection_type,

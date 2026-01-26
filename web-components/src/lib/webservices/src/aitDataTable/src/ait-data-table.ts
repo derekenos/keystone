@@ -87,8 +87,8 @@ export class AitDataTable<RowT> extends LitElement {
   rowClickEnabled: PropsT<RowT>["rowClickEnabled"] = false;
   @property() rowIdColumn: PropsT<RowT>["rowIdColumn"] = "id";
   @property()
-  rowSelectDisabledCallback: PropsT<RowT>["rowSelectDisabledCallback"] = () =>
-    false;
+  rowSelectDisabledReasonCallback: PropsT<RowT>["rowSelectDisabledReasonCallback"] =
+    () => null;
   @property({ type: Array }) searchColumns: PropsT<RowT>["searchColumns"] = [];
   @property({ type: Array })
   searchColumnLabels: PropsT<RowT>["searchColumnLabels"] = [];
@@ -140,7 +140,7 @@ export class AitDataTable<RowT> extends LitElement {
         pluralName: this.pluralName,
         rowClickEnabled: this.rowClickEnabled,
         rowIdColumn: this.rowIdColumn,
-        rowSelectDisabledCallback: this.rowSelectDisabledCallback,
+        rowSelectDisabledReasonCallback: this.rowSelectDisabledReasonCallback,
         searchColumns: this.searchColumns,
         searchColumnLabels: this.searchColumnLabels,
         selectAllExtraQueryParams: this.selectAllExtraQueryParams,
