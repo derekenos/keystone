@@ -21,7 +21,9 @@ export interface DataTable<RowT> extends HTMLElement {
     state: {
         rows: Array<EnrichedDataTableRow<RowT>>;
         search: {
+            limit: number;
             numHits: number;
+            pageNum: number;
         };
         selectedIdRowMap: Map<string, RowT>;
     };
@@ -75,7 +77,7 @@ export interface DataTable<RowT> extends HTMLElement {
     setSelectionActionButtonDisabledState: (disabled: boolean) => void;
     throttledDoSearch: (resetPageNum?: boolean) => Promise<null>;
     unenrichRowObject: (row: EnrichedDataTableRow<RowT>) => RowT;
-    updatePaginator: () => Promise<null>;
+    updatePaginator: (customShowingEl: undefined | HTMLElement) => Promise<null>;
 }
 export declare enum NativeDataTableEvents {
     SELECTION_CHANGE = "SELECTION_CHANGE"

@@ -3,6 +3,7 @@ import { ArchDataTable } from "../../archDataTable/index";
 import { Dataset, ValueOf } from "../../lib/types";
 export declare class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
     collectionId: number;
+    isOptedOutCollection: boolean;
     columnNameHeaderTooltipMap: {
         category: string;
         sample: string;

@@ -8,6 +8,8 @@ export declare const Paths: {
     dataset: (id: Dataset["id"]) => string;
     datasets: string;
     generateCollectionDataset: (collectionId: Collection["id"]) => string;
+    hiddenCollections: string;
+    hiddenDatasets: string;
     buildSubCollection: (sourceCollectionIds?: Array<Collection["id"]>) => string;
     teams: string;
 };
