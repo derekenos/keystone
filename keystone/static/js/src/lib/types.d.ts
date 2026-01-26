@@ -39,14 +39,15 @@ export type Collection = {
     id: number;
     name: string;
     collection_type: CollectionType;
-    size_bytes: number;
+    size_bytes: null | number;
     dataset_count: number;
-    latest_dataset: {
+    latest_dataset: null | {
         id: number;
         name: string;
         start_time: Date;
     };
     metadata: CollectionMetadata;
+    empty?: boolean;
 };
 export interface CollectionSettings {
     opt_out: boolean;

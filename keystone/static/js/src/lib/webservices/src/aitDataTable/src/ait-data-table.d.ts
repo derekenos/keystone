@@ -34,7 +34,7 @@ export declare class AitDataTable<RowT> extends LitElement {
     props: PropsT<RowT> | Record<string, unknown>;
     rowClickEnabled: PropsT<RowT>["rowClickEnabled"];
     rowIdColumn: PropsT<RowT>["rowIdColumn"];
-    rowSelectDisabledCallback: PropsT<RowT>["rowSelectDisabledCallback"];
+    rowSelectDisabledReasonCallback: PropsT<RowT>["rowSelectDisabledReasonCallback"];
     searchColumns: PropsT<RowT>["searchColumns"];
     searchColumnLabels: PropsT<RowT>["searchColumnLabels"];
     selectAllExtraQueryParams: PropsT<RowT>["selectAllExtraQueryParams"];

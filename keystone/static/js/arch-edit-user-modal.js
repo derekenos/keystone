@@ -1,4 +1,4 @@
-import{i as e,_ as t,e as s,y as r,a}from"./chunk-query-assigned-elements.js";import{t as o}from"./chunk-state.js";import{i}from"./chunk-focusable.js";import{A as l}from"./chunk-ArchAPI.js";import{a as n,U as d}from"./chunk-helpers.js";import{A as m}from"./chunk-arch-select-adder.js";import{g as c,B as h}from"./chunk-styles.js";import{A as u}from"./chunk-arch-modal.js";import"./chunk-scale-large.js";import"./chunk-sizedMixin.js";var p=[c,e`
+import{i as e,_ as t,e as s,y as r,a}from"./chunk-query-assigned-elements.js";import{t as o}from"./chunk-state.js";import{i}from"./chunk-focusable.js";import{A as l}from"./chunk-ArchAPI.js";import{a as n,U as d}from"./chunk-helpers.js";import{A as m}from"./chunk-arch-select-adder.js";import{g as c,B as h}from"./chunk-styles.js";import{A as u}from"./chunk-arch-modal.js";import"./chunk-constants.js";import"./chunk-scale-large.js";import"./chunk-sizedMixin.js";var p=[c,e`
     h3 {
       margin-block-start: 0;
       margin-block-end: 0.5rem;

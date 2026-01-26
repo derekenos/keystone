@@ -1,11 +1,11 @@
-import{i as e,_ as t,e as a,s,y as l,a as c}from"./chunk-query-assigned-elements.js";import{E as i}from"./chunk-index.js";import{v as d}from"./chunk-helpers.js";let r=class extends s{constructor(){super(...arguments),this.facetField="",this.facetFieldResults=[],this.selectedfacetFieldResults=[]}readableFacetFieldName(e){return e.split("_")[1].split(/(?=[A-Z])/).map((e=>e.charAt(0).toUpperCase()+e.slice(1))).join(" ")}handleSelectFacet(e){this.selectedfacetFieldResults.includes(e)||this.emitEvent("facet-selected",{facetFieldName:this.facetField,facetName:e})}handleDeselectFacet(e){this.emitEvent("facet-deselected",{facetFieldName:this.facetField,facetName:e})}emitEvent(e,t={}){this.dispatchEvent(i.createEvent(e,t?{detail:t}:{}))}render(){return l`
+import{i as e,_ as t,e as s,s as a,y as c,a as l}from"./chunk-query-assigned-elements.js";import{E as i}from"./chunk-index.js";import{r as d}from"./chunk-helpers.js";import"./chunk-constants.js";let n=class extends a{constructor(){super(...arguments),this.facetField="",this.facetFieldResults=[],this.selectedfacetFieldResults=[]}readableFacetFieldName(e){return e.split("_")[1].split(/(?=[A-Z])/).map((e=>e.charAt(0).toUpperCase()+e.slice(1))).join(" ")}handleSelectFacet(e){this.selectedfacetFieldResults.includes(e)||this.emitEvent("facet-selected",{facetFieldName:this.facetField,facetName:e})}handleDeselectFacet(e){this.emitEvent("facet-deselected",{facetFieldName:this.facetField,facetName:e})}emitEvent(e,t={}){this.dispatchEvent(i.createEvent(e,t?{detail:t}:{}))}render(){return c`
       <div class="facet">
         <h3>${this.readableFacetFieldName(this.facetField)}</h3>
         <hr />
         <div class="facetResults">
           <ul>
-            ${this.facetFieldResults.map((e=>l`
-                ${e.count>0?l`
+            ${this.facetFieldResults.map((e=>c`
+                ${e.count>0?c`
                       <li
                         class=${this.selectedfacetFieldResults.includes(e.name)?"selected":"notSelected"}
                       >
@@ -17,7 +17,7 @@ import{i as e,_ as t,e as a,s,y as l,a as c}from"./chunk-query-assigned-elements
                           ${d(e.name,this.facetField)}
                           (${e.count})
                         </span>
-                        ${this.selectedfacetFieldResults.includes(e.name)?l`
+                        ${this.selectedfacetFieldResults.includes(e.name)?c`
                               <button
                                 @click=${()=>this.handleDeselectFacet(e.name)}
                               >
@@ -25,12 +25,12 @@ import{i as e,_ as t,e as a,s,y as l,a as c}from"./chunk-query-assigned-elements
                               </button>
                             `:""}
                       </li>
-                    `:l``}
+                    `:c``}
               `))}
           </ul>
         </div>
       </div>
-    `}};r.styles=e`
+    `}};n.styles=e`
     .facet {
       border-radius: 6px;
       background-color: rgb(255, 255, 255);
@@ -65,5 +65,5 @@ import{i as e,_ as t,e as a,s,y as l,a as c}from"./chunk-query-assigned-elements
       cursor: pointer;
       color: red;
     }
-  `,t([a({type:String})],r.prototype,"facetField",void 0),t([a({type:Array})],r.prototype,"facetFieldResults",void 0),t([a({type:Array})],r.prototype,"selectedfacetFieldResults",void 0),r=t([c("collection-surveyor-facet")],r);export{r as CollectionSurveyorFacet};
+  `,t([s({type:String})],n.prototype,"facetField",void 0),t([s({type:Array})],n.prototype,"facetFieldResults",void 0),t([s({type:Array})],n.prototype,"selectedfacetFieldResults",void 0),n=t([l("collection-surveyor-facet")],n);export{n as CollectionSurveyorFacet};
 //# sourceMappingURL=collection-surveyor-facet.js.map

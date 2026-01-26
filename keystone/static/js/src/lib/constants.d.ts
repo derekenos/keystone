@@ -7,3 +7,4 @@ export declare const CollectionTypeDisplayMap: Record<CollectionType, string>;
 export declare const UrlCollectionParamName = "cid";
 export declare const UrlCollectionsParamName = "cid[]";
 export declare const DefaultSelectElementPromptText = "Please select...";
+export declare const NewHelpTicketUrl = "https://arch-webservices.zendesk.com/hc/en-us/requests/new";

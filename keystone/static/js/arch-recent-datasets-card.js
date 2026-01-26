@@ -1,4 +1,4 @@
-import{i as t,_ as a,s as e,y as s,a as r}from"./chunk-query-assigned-elements.js";import{t as i}from"./chunk-state.js";import{A as o}from"./chunk-ArchAPI.js";import{a as d,b as n}from"./chunk-helpers.js";import"./chunk-arch-card.js";import"./arch-loading-indicator.js";import{g as l,c}from"./chunk-styles.js";import"./arch-tooltip.js";import"./chunk-scale-large.js";import"./chunk-focusable.js";import"./chunk-sp-overlay.js";var h,m=[l,c,t`
+import{i as t,_ as a,s as e,y as s,a as r}from"./chunk-query-assigned-elements.js";import{t as i}from"./chunk-state.js";import{A as o}from"./chunk-ArchAPI.js";import{a as n,b as d}from"./chunk-helpers.js";import"./chunk-arch-card.js";import"./arch-loading-indicator.js";import{g as l,c}from"./chunk-styles.js";import"./chunk-constants.js";import"./arch-tooltip.js";import"./chunk-scale-large.js";import"./chunk-focusable.js";import"./chunk-sp-overlay.js";var h,m=[l,c,t`
     thead > tr.hidden-header {
       color: transparent;
     }
@@ -41,7 +41,7 @@ import{i as t,_ as a,s as e,y as s,a as r}from"./chunk-query-assigned-elements.j
             </tr>`]:i?o.map((t=>{const a=`${t.name}${t.is_sample?" (Sample)":""}`;return s`
               <tr>
                 <td class="name">
-                  <a href="${d.dataset(t.id)}" title="${a}">
+                  <a href="${n.dataset(t.id)}" title="${a}">
                     ${a}
                   </a>
                 </td>
@@ -49,7 +49,7 @@ import{i as t,_ as a,s as e,y as s,a as r}from"./chunk-query-assigned-elements.j
                   ${t.collection_name}
                 </td>
                 <td class="date">
-                  ${n(t.finished_time)}
+                  ${d(t.finished_time)}
                 </td>
               </tr>
             `})):[s`<tr class="no-results">

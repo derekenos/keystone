@@ -4,6 +4,7 @@ import { Dataset, ValueOf } from "../../lib/types";
 export declare class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
     collectionId: number;
     isOptedOutCollection: boolean;
+    isEmptyCollection: boolean;
     columnNameHeaderTooltipMap: {
         category: string;
         sample: string;

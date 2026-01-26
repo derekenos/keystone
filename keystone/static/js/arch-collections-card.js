@@ -1,4 +1,4 @@
-import{i as t,_ as o,s as e,y as s,a as l}from"./chunk-query-assigned-elements.js";import{t as a}from"./chunk-state.js";import{A as i}from"./chunk-ArchAPI.js";import{a as c,h as n}from"./chunk-helpers.js";import"./chunk-arch-card.js";import"./arch-loading-indicator.js";import{g as r,c as d}from"./chunk-styles.js";import"./arch-tooltip.js";import"./chunk-scale-large.js";import"./chunk-focusable.js";import"./chunk-sp-overlay.js";var h,m=[r,d,t`
+import{i as t,_ as o,s as e,y as s,a}from"./chunk-query-assigned-elements.js";import{t as l}from"./chunk-state.js";import{A as i}from"./chunk-ArchAPI.js";import{a as c,h as n}from"./chunk-helpers.js";import"./chunk-arch-card.js";import"./arch-loading-indicator.js";import{g as r,c as d}from"./chunk-styles.js";import"./chunk-constants.js";import"./arch-tooltip.js";import"./chunk-scale-large.js";import"./chunk-focusable.js";import"./chunk-sp-overlay.js";var h,m=[r,d,t`
     thead > tr.hidden-header {
       color: transparent;
     }
@@ -47,13 +47,13 @@ import{i as t,_ as o,s as e,y as s,a as l}from"./chunk-query-assigned-elements.j
               </tr>
             </thead>
             <tbody>
-              ${(()=>{var l;return o?[s`
+              ${(()=>{var a;return o?[s`
               <tr>
                 <td colspan="3">
                   <arch-loading-indicator></arch-loading-indicator>
                 </td>
               </tr>
-            `]:e?(null!==(l=this.collections)&&void 0!==l?l:[]).slice(0,t).map((t=>s`
+            `]:e?(null!==(a=this.collections)&&void 0!==a?a:[]).slice(0,t).map((t=>s`
               <tr>
                 <td class="name">
                   <a
@@ -96,5 +96,5 @@ import{i as t,_ as o,s as e,y as s,a as l}from"./chunk-query-assigned-elements.j
               `}
         </div>
       </arch-card>
-    `}async initCollections(){const t=await i.collections.get([["sort","=","-id"],["limit","=",h.maxDisplayedCollections]]);this.numTotalCollections=t.count,this.collections=t.items}};u.maxDisplayedCollections=10,u.styles=m,o([a()],u.prototype,"numTotalCollections",void 0),o([a()],u.prototype,"collections",void 0),u=h=o([l("arch-collections-card")],u);export{u as ArchCollectionsCard};
+    `}async initCollections(){const t=await i.collections.get([["sort","=","-id"],["limit","=",h.maxDisplayedCollections]]);this.numTotalCollections=t.count,this.collections=t.items}};u.maxDisplayedCollections=10,u.styles=m,o([l()],u.prototype,"numTotalCollections",void 0),o([l()],u.prototype,"collections",void 0),u=h=o([a("arch-collections-card")],u);export{u as ArchCollectionsCard};
 //# sourceMappingURL=arch-collections-card.js.map
