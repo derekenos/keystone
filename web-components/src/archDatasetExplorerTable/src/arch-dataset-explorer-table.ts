@@ -15,7 +15,6 @@ import Styles from "./styles";
 @customElement("arch-dataset-explorer-table")
 export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
   @property({ type: Boolean, attribute: "show-hidden" }) showHidden = false;
-  @property({ type: String, attribute: "hidden-icon" }) hiddenIconUrl = "";
 
   @state() columnNameHeaderTooltipMap = {
     category:
@@ -33,68 +32,56 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
     /*
      * Render the `Name` cell value.
      */
-    const { hiddenIconUrl, showHidden } = this;
+    const { showHidden } = this;
     if (dataset.state !== ProcessingState.FINISHED) {
       return dataset.name;
     }
-    const wrapper = document.createElement("div");
-    if (showHidden && dataset.user_settings?.opt_out) {
-      wrapper.appendChild(
-        createElement("img", {
-          className: "hidden-icon",
-          src: hiddenIconUrl,
-          title: "This dataset is hidden directly via user settings",
-        })
-      );
-    }
-    wrapper.appendChild(
-      createElement("a", {
-        href: Paths.dataset(dataset.id),
-        children: [
-          createElement("span", {
-            className: "highlightable",
-            textContent: dataset.name,
-          }),
-        ],
-      })
-    );
-    return wrapper;
+    const isHiddenBy = showHidden && dataset.user_settings?.opt_out;
+    return createElement("a", {
+      href: Paths.dataset(dataset.id),
+      children: [
+        createElement("span", {
+          classList: ["highlightable", isHiddenBy ? "hidden-by" : ""],
+          textContent: dataset.name,
+          title: isHiddenBy
+            ? "This dataset is hidden directly via user settings"
+            : "",
+        }),
+      ],
+    });
   }
 
   renderCollectionCell(
     collectionName: Dataset["collection_name"],
     dataset: Dataset
   ): HTMLElement {
-    const { hiddenIconUrl, showHidden } = this;
+    const { showHidden } = this;
+    const isHiddenBy = showHidden && dataset.collection_opted_out;
     const nameEl = createElement("span", {
-      className: "highlightable",
+      classList: [
+        "highlightable",
+        isHiddenBy ? "hidden-by" : "",
+        dataset.collection_access ? "" : "no-collection-access",
+      ],
       textContent: collectionName.toString(),
+      title: [
+        isHiddenBy
+          ? "This dataset is hidden because its collection is hidden via user settings"
+          : "",
+        dataset.collection_access
+          ? ""
+          : "You are not authorized to access this collection",
+      ]
+        .filter(Boolean)
+        .join(" and "),
     });
 
-    if (!dataset.collection_access) {
-      nameEl.classList.add("no-collection-access");
-      nameEl.title = "You are not authorized to access this collection";
-      return nameEl;
-    }
-
-    const wrapper = document.createElement("div");
-    if (showHidden && dataset.collection_opted_out) {
-      wrapper.appendChild(
-        createElement("img", {
-          className: "hidden-icon",
-          src: hiddenIconUrl,
-          title:
-            "This dataset is hidden as a result of its collection being hidden via user settings",
-        })
-      );
-    }
-    wrapper.appendChild(
-      createElement("a", {
-        href: Paths.collection(dataset.collection_id),
-        children: [nameEl],
-      })
-    );
-    return wrapper;
+    return !dataset.collection_access
+      ? nameEl
+      : createElement("a", {
+          href: Paths.collection(dataset.collection_id),
+          children: [nameEl],
+        });
   }
 
   willUpdate(_changedProperties: PropertyValues) {
@@ -156,13 +143,15 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
     ];
     this.filterableColumns = [true, true, true, true, true, false, false];
     this.noResultsMessage = createElement("i", {
-      children: [
-        "No datasets have been generated. ",
-        createElement("a", {
-          href: "/datasets/generate",
-          textContent: "Generate a new dataset",
-        }),
-      ],
+      children: showHidden
+        ? ["You have no hidden datasets."]
+        : [
+            "No datasets have been generated. ",
+            createElement("a", {
+              href: "/datasets/generate",
+              textContent: "Generate a new dataset",
+            }),
+          ],
     });
     this.searchColumns = ["name", "category_name", "collection_name", "state"];
     this.searchColumnLabels = ["Name", "Category", "Collection", "State"];
