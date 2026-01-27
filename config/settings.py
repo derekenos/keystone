@@ -109,6 +109,15 @@ DB_QUERY_DEBUG = False
 
 COLLECTION_IMAGE_MAX_WIDTH_PX = 250
 
+# Setting ALLOW_INACTIVE_USER_AS_VIEWER, and settings the auth backend to
+# AllowAllUsersModelBackend, will allow inactive users to retain the ability to log in,
+# but with their access restricted to that of the VIEWER role.
+ALLOW_INACTIVE_USER_AS_VIEWER = (
+    env.get("KEYSTONE_ALLOW_INACTIVE_USER_AS_VIEWER") == "true"
+)
+if ALLOW_INACTIVE_USER_AS_VIEWER:
+    AUTHENTICATION_BACKENDS = ["django.contrib.auth.backends.AllowAllUsersModelBackend"]
+
 ALLOWED_HOSTS = (
     [
         "localhost",

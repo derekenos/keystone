@@ -24,6 +24,7 @@ from keystone.models import (
     JobStatus,
     Team,
     User,
+    UserRoles,
 )
 from keystone.permissions import Permissions
 from .test_helpers import read_json_file
@@ -351,6 +352,18 @@ class TestUser:
         with pytest.raises(OperationalError) as exc_info:
             user.save()
         assert exc_info.value.args[0].startswith("username is immutable")
+
+    @mark.django_db
+    def test_is_viewer(self, make_user, make_account):
+        # User.is_viewer returns True if the user role=VIEWER or if the
+        # user's account or user itself is inactive.
+        for make_user_kwargs, expected in (
+            ({}, False),
+            ({"role": UserRoles.VIEWER}, True),
+            ({"is_active": False}, True),
+            ({"account": make_account(is_active=False)}, True),
+        ):
+            assert make_user(**make_user_kwargs).is_viewer == expected
 
     @mark.django_db
     def test_job_start_get_job_status(self, make_jobstart):

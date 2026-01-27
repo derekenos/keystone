@@ -1,8 +1,9 @@
+import os
 from http import HTTPStatus
 from unittest.mock import patch
 
 from django.http import HttpResponse
-from django.test import Client as _Client
+from django.test import Client as _Client, override_settings
 from pytest import mark
 
 from config.settings import COLAB_MAX_FILE_SIZE_BYTES
@@ -70,3 +71,43 @@ def test_dataset_file_colab_disallows_inactive_user(
         Client(user).get(f"/datasets/{dataset.id}/files/{filename}/colab").status_code
         == status_code
     )
+
+
+@mark.django_db
+@override_settings(
+    ALLOW_INACTIVE_USER_AS_VIEWER=False,
+    AUTHENTICATION_BACKENDS=["django.contrib.auth.backends.ModelBackend"],
+)
+def test_inactive_user_cant_login_when_ALLOW_INACTIVE_USER_AS_VIEWER_notset(
+    settings, make_user
+):
+    """An inactive user is not allowed to log in when ALLOW_INACTIVE_USER_AS_VIEWER=False
+    and AUTHENTICATION_BACKENDS does not include AllowAllUsersModelBackend.
+    """
+    user = make_user(is_active=False)
+    user.set_password("password")
+    user.save()
+    assert (
+        _Client()
+        .post("/login/", {"username": user.username, "password": "password"})
+        .status_code
+        == HTTPStatus.OK
+    )
+
+
+@mark.django_db
+@override_settings(
+    ALLOW_INACTIVE_USER_AS_VIEWER=True,
+    AUTHENTICATION_BACKENDS=["django.contrib.auth.backends.AllowAllUsersModelBackend"],
+)
+def test_inactive_user_can_login_when_ALLOW_INACTIVE_USER_AS_VIEWER_isset(
+    settings, make_user
+):
+    """An inactive user is allowed to log in when ALLOW_INACTIVE_USER_AS_VIEWER=True and
+    AUTHENTICATION_BACKENDS does include AllowAllUsersModelBackend.
+    """
+    user = make_user(is_active=False)
+    user.set_password("password")
+    user.save()
+    res = _Client().post("/login/", {"username": user.username, "password": "password"})
+    assert res.status_code == HTTPStatus.FOUND and res.headers.get("location") == "/"

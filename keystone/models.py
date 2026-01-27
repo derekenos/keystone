@@ -119,8 +119,12 @@ class User(AbstractUser):
     def is_viewer(self):
         """Return a bool indicating whether this user should be constrained to
         Viewer-level permissions based on whether their role=VIEWER or their
-        account is inactive."""
-        return self.role == UserRoles.VIEWER or not self.account.is_active
+        account or themself is inactive."""
+        return (
+            self.role == UserRoles.VIEWER
+            or not self.account.is_active
+            or not self.is_active
+        )
 
     def can_admin_account(self, account_id):
         """Return a bool indicating whether the user is allowed to perform
