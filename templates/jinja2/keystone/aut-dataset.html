@@ -20,11 +20,15 @@
 {% extends 'keystone/base.html' %}
 
 {% block header_title %}
+{% if dataset.collection_access %}
 <a
   href="{{ url('collection-detail', args=(collection.id,)) }}"
   style="font-size: inherit"
   title="View the collection used to generate this dataset"
 >{{ collection.name }}</a>: {{ dataset_displayname }}
+{% else %}
+{{ collection.name }}: {{ dataset_displayname }}
+{% endif %}
 {% endblock %}
 
 {% block head_extra %}

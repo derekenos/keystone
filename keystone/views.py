@@ -4,6 +4,7 @@ from datetime import datetime
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import AnonymousUser
+from django.db.models import Exists, OuterRef
 from django.forms import model_to_dict
 from django.http import (
     HttpResponseBadRequest,
@@ -351,14 +352,22 @@ def hidden_datasets(request):
 @login_required
 def dataset_detail(request, dataset_id):
     """Dataset detail page"""
+    user = request.user
     dataset = get_object_or_404(
         Dataset.user_queryset(
-            request.user, include_opted_out=True, include_opted_out_collections=True
+            user, include_opted_out=True, include_opted_out_collections=True
         )
         .select_related("job_start")
         .select_related("job_start__job_type")
         .select_related("job_start__user")
-        .select_related("job_start__jobcomplete"),
+        .select_related("job_start__jobcomplete")
+        .annotate(
+            collection_access=Exists(
+                Collection.user_queryset(user).filter(
+                    id=OuterRef("job_start__collection__id")
+                )
+            )
+        ),
         id=dataset_id,
     )
     template_filename = settings.JOB_TYPE_UUID_NON_AUT_TEMPLATE_FILENAME_MAP.get(
