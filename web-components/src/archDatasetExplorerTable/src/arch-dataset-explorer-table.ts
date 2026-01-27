@@ -143,13 +143,15 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
     ];
     this.filterableColumns = [true, true, true, true, true, false, false];
     this.noResultsMessage = createElement("i", {
-      children: [
-        "No datasets have been generated. ",
-        createElement("a", {
-          href: "/datasets/generate",
-          textContent: "Generate a new dataset",
-        }),
-      ],
+      children: showHidden
+        ? ["You have no hidden datasets."]
+        : [
+            "No datasets have been generated. ",
+            createElement("a", {
+              href: "/datasets/generate",
+              textContent: "Generate a new dataset",
+            }),
+          ],
     });
     this.searchColumns = ["name", "category_name", "collection_name", "state"];
     this.searchColumnLabels = ["Name", "Category", "Collection", "State"];
