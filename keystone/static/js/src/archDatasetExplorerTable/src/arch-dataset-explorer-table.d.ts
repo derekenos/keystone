@@ -3,7 +3,6 @@ import { ArchDataTable } from "../../archDataTable/index";
 import { Dataset, ValueOf } from "../../lib/types";
 export declare class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
     showHidden: boolean;
-    hiddenIconUrl: string;
     columnNameHeaderTooltipMap: {
         category: string;
         sample: string;
