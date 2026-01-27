@@ -29,7 +29,8 @@ export function createElement(tagName, attrs = {}) {
   }
   // Maybe set the classes.
   if (classList.length) {
-    el.classList.add(...classList);
+    // Filter out empty strings to prevent "token provided must not be empty" error.
+    el.classList.add(...classList.filter(Boolean));
   }
   // Maybe update the dataset.
   if (typeof(dataset) === "object") {

@@ -7,30 +7,24 @@ import { ArchAlert, AlertClass } from "../../archAlert/index";
 export class ArchHiddenDatasetsAlert extends ArchAlert {
   @property() alertClass = AlertClass.Info;
   @property() nonDismissable = true;
-
-  @property({ type: String, attribute: "hidden-icon" }) hiddenIconUrl!: string;
+  @property() message = html`
+    You are viewing your hidden datasets. Datasets in this view are hidden
+    directly or by collection, as indicated by <i class="hidden-icon"></i>.
+    Click on the "Settings" button for each collection or dataset below to
+    manage its visibility.
+  `;
 
   static styles = [
     ...ArchAlert.styles,
     css`
-      img {
+      i.hidden-icon::before {
+        content: var(--hidden-icon-content, "");
+        display: inline-block;
         width: 1rem;
         opacity: 0.5;
       }
     `,
   ];
-
-  connectedCallback() {
-    super.connectedCallback();
-    const { hiddenIconUrl } = this;
-    this.message = html`
-      You are viewing your hidden datasets. Datasets in this view are hidden
-      directly or by collection, as indicated by
-      <img src=${hiddenIconUrl} alt="not visible icon" />. Click on the
-      "Settings" button for each collection or dataset below to manage its
-      visibility.
-    `;
-  }
 }
 
 // Injects the tag into the global name space

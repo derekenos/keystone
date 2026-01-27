@@ -34,7 +34,9 @@ export default [
       max-width: none;
     }
 
-    data-table > table > tbody > tr > td img.hidden-icon {
+    data-table > table > tbody > tr > td .hidden-by::before {
+      content: var(--data-table-hidden-icon-content, "");
+      display: inline-block;
       width: 1rem;
       opacity: 0.5;
       margin-right: 0.4rem;
