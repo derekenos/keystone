@@ -358,13 +358,23 @@ def test_username_can_not_be_updated(role, make_account, make_user):
 @mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER, UserRoles.VIEWER))
 def test_no_user_can_update_own_role(role, make_account, make_user):
     """No user can update their own role."""
-    admin_user = make_user(account=make_account(), role=role)
-    res = Client(admin_user).update_user(
-        admin_user,
+    user = make_user(account=make_account(), role=role)
+    res = Client(user).update_user(
+        user,
         {"role": UserRoles.USER if role == UserRoles.ADMIN else UserRoles.ADMIN},
     )
     assert res.status_code == HTTPStatus.FORBIDDEN
     assert res.json()["detail"] == "self role modification not allowed"
+
+
+@mark.django_db
+@mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER, UserRoles.VIEWER))
+def test_no_user_can_update_own_is_active(role, make_account, make_user):
+    """No user can update their own is_active state."""
+    user = make_user(account=make_account(), role=role)
+    res = Client(user).update_user(user, {"is_active": False})
+    assert res.status_code == HTTPStatus.FORBIDDEN
+    assert res.json()["detail"] == "self is_active modification not allowed"
 
 
 @mark.django_db

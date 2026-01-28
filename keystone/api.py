@@ -1139,6 +1139,9 @@ def update_user(request, payload: UpdateUserSchema, user_id: int):
             # A user is not allowed to modify their own role.
             if k == "role" and target_user == req_user:
                 raise PermissionDenied("self role modification not allowed")
+            # A user is not allowed to modify their own is_active.
+            if k == "is_active" and target_user == req_user:
+                raise PermissionDenied("self is_active modification not allowed")
             # Handle "teams".
             if k == "teams":
                 team_ids = {x["id"] for x in v}
