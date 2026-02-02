@@ -6,6 +6,7 @@ from datetime import (
 )
 
 from django.core.exceptions import ValidationError
+from django.test import override_settings
 from django.db import OperationalError
 from model_bakery import baker
 from pytest import mark
@@ -64,6 +65,28 @@ class TestCollection:
             collection3,
             collection4,
         }
+
+    @mark.django_db
+    @override_settings(ALLOW_INACTIVE_USER_AS_VIEWER=False)
+    def test_inactive_user_cant_access_collections(self, make_user, make_collection):
+        """When ALLOW_INACTIVE_USER_AS_VIEWER=False, inactive users have no permissions."""
+        user = make_user(is_active=False)
+        collection = make_collection()
+        collection.users.add(user)
+        assert not user.has_perm(Permissions.VIEW_COLLECTION, collection)
+
+    @mark.django_db
+    @override_settings(ALLOW_INACTIVE_USER_AS_VIEWER=True)
+    def test_inactive_user_can_access_collections_when_allowed(
+        self, make_user, make_collection
+    ):
+        """When ALLOW_INACTIVE_USER_AS_VIEWER=True, inactive users are able to access
+        their collections.
+        """
+        user = make_user(is_active=False)
+        collection = make_collection()
+        collection.users.add(user)
+        assert user.has_perm(Permissions.VIEW_COLLECTION, collection)
 
     @mark.django_db
     def test_user_queryset_include_opted_out(self, make_user, make_collection):
