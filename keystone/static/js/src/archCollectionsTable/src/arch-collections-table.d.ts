@@ -3,6 +3,8 @@ import { ArchDataTable } from "../../archDataTable/index";
 import { Collection, ValueOf } from "../../lib/types";
 export declare class ArchCollectionsTable extends ArchDataTable<Collection> {
     showHidden: boolean;
+    hideGenerateDataset: boolean;
+    hideCreateCustomCollection: boolean;
     static styles: import("lit").CSSResult[];
     static renderNameCell(name: ValueOf<Collection>, collection: Collection): HTMLElement;
     static renderLatestDatasetCell(lastJobName: ValueOf<Collection>, collection: Collection): string | HTMLElement;

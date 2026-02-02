@@ -3,6 +3,7 @@ import { Collection } from "../../lib/types";
 import "../../archCard/index";
 import "../../archLoadingIndicator/index";
 export declare class ArchCollectionsCard extends LitElement {
+    hideCreateCustomCollection: boolean;
     numTotalCollections: number;
     collections: undefined | Array<Collection>;
     static maxDisplayedCollections: number;

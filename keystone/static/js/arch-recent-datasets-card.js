@@ -1,4 +1,4 @@
-import{i as t,_ as a,s as e,y as s,a as r}from"./chunk-query-assigned-elements.js";import{t as i}from"./chunk-state.js";import{A as o}from"./chunk-ArchAPI.js";import{a as n,b as d}from"./chunk-helpers.js";import"./chunk-arch-card.js";import"./arch-loading-indicator.js";import{g as l,c}from"./chunk-styles.js";import"./chunk-constants.js";import"./arch-tooltip.js";import"./chunk-scale-large.js";import"./chunk-focusable.js";import"./chunk-sp-overlay.js";var h,m=[l,c,t`
+import{i as t,_ as a,e,s,y as r,a as i}from"./chunk-query-assigned-elements.js";import{t as o}from"./chunk-state.js";import{A as n}from"./chunk-ArchAPI.js";import{a as d,b as l}from"./chunk-helpers.js";import"./chunk-arch-card.js";import"./arch-loading-indicator.js";import{g as c,c as h}from"./chunk-styles.js";import"./chunk-constants.js";import"./arch-tooltip.js";import"./chunk-scale-large.js";import"./chunk-focusable.js";import"./chunk-sp-overlay.js";var m,p=[c,h,t`
     thead > tr.hidden-header {
       color: transparent;
     }
@@ -18,30 +18,30 @@ import{i as t,_ as a,s as e,y as s,a as r}from"./chunk-query-assigned-elements.j
     td.date {
       text-align: right;
     }
-  `];let p=h=class extends e{constructor(){super(),this.numTotalDatasets=0,this.datasets=void 0,this.initDatasets()}render(){var t,a;const{numTotalDatasets:e}=this,r=void 0===this.datasets,i=(null!==(t=this.datasets)&&void 0!==t?t:[]).length>0,o=null!==(a=this.datasets)&&void 0!==a?a:[];return s`
+  `];let u=m=class extends s{constructor(){super(),this.hideGenerateDataset=!1,this.numTotalDatasets=0,this.datasets=void 0,this.initDatasets()}render(){var t,a;const{numTotalDatasets:e,hideGenerateDataset:s}=this,i=void 0===this.datasets,o=(null!==(t=this.datasets)&&void 0!==t?t:[]).length>0,n=null!==(a=this.datasets)&&void 0!==a?a:[];return r`
       <arch-card
         title="Recent Datasets"
-        ctatext="Generate New Dataset"
-        ctahref="/datasets/generate"
+        ctatext=${s?"":"Generate New Dataset"}
+        ctahref=${s?"":"/datasets/generate"}
       >
         <div slot="content">
           <table>
             <thead>
-              <tr class="${r||!i?"hidden-header":""}">
+              <tr class="${i||!o?"hidden-header":""}">
                 <th class="name">Dataset</th>
                 <th class="collection">Collection Name</th>
                 <th class="date">Date Generated</th>
               </tr>
             </thead>
             <tbody>
-              ${r?[s`<tr>
+              ${i?[r`<tr>
               <td colspan="3">
                 <arch-loading-indicator></arch-loading-indicator>
               </td>
-            </tr>`]:i?o.map((t=>{const a=`${t.name}${t.is_sample?" (Sample)":""}`;return s`
+            </tr>`]:o?n.map((t=>{const a=`${t.name}${t.is_sample?" (Sample)":""}`;return r`
               <tr>
                 <td class="name">
-                  <a href="${n.dataset(t.id)}" title="${a}">
+                  <a href="${d.dataset(t.id)}" title="${a}">
                     ${a}
                   </a>
                 </td>
@@ -49,16 +49,21 @@ import{i as t,_ as a,s as e,y as s,a as r}from"./chunk-query-assigned-elements.j
                   ${t.collection_name}
                 </td>
                 <td class="date">
-                  ${d(t.finished_time)}
+                  ${l(t.finished_time)}
                 </td>
               </tr>
-            `})):[s`<tr class="no-results">
+            `})):[r`<tr class="no-results">
               <td colspan="3">
                 <i>
                   No datasets have been generated.
-                  <a href="/datasets/generate" title="Generate a new dataset">
-                    Generate a new dataset
-                  </a>
+                  ${s?r``:r`
+                        <a
+                          href="/datasets/generate"
+                          title="Generate a new dataset"
+                        >
+                          Generate a new dataset
+                        </a>
+                      `}
                 </i>
               </td>
             </tr>`]}
@@ -66,14 +71,14 @@ import{i as t,_ as a,s as e,y as s,a as r}from"./chunk-query-assigned-elements.j
           </table>
         </div>
         <div slot="footer">
-          ${r||!i?s``:s`
+          ${i||!o?r``:r`
                 <a href="/datasets/explore" class="view-all">
                   View
-                  ${o.length<e?s`All ${e}`:s``}
+                  ${n.length<e?r`All ${e}`:r``}
                   Datasets
                 </a>
               `}
         </div>
       </arch-card>
-    `}async initDatasets(){const t=await o.datasets.get([["state","=","FINISHED"],["sort","=","-start_time"],["limit","=",h.maxDisplayedDatasets]]);this.numTotalDatasets=t.count,this.datasets=t.items}};p.maxDisplayedDatasets=10,p.styles=m,a([i()],p.prototype,"numTotalDatasets",void 0),a([i()],p.prototype,"datasets",void 0),p=h=a([r("arch-recent-datasets-card")],p);export{p as ArchRecentDatasetsCard};
+    `}async initDatasets(){const t=await n.datasets.get([["state","=","FINISHED"],["sort","=","-start_time"],["limit","=",m.maxDisplayedDatasets]]);this.numTotalDatasets=t.count,this.datasets=t.items}};u.maxDisplayedDatasets=10,u.styles=p,a([e({type:Boolean,attribute:"hide-generate-dataset"})],u.prototype,"hideGenerateDataset",void 0),a([o()],u.prototype,"numTotalDatasets",void 0),a([o()],u.prototype,"datasets",void 0),u=m=a([i("arch-recent-datasets-card")],u);export{u as ArchRecentDatasetsCard};
 //# sourceMappingURL=arch-recent-datasets-card.js.map

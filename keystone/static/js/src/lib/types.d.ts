@@ -126,7 +126,8 @@ type DatasetStartTimeString = string;
 export type JobIdStatesMap = Record<Dataset["job_id"], Array<[Dataset["id"], DatasetStartTimeString, Dataset["state"]]>>;
 export declare enum UserRoles {
     ADMIN = "ADMIN",
-    USER = "USER"
+    USER = "USER",
+    VIEWER = "VIEWER"
 }
 export type User = {
     id: number;

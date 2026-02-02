@@ -1,4 +1,4 @@
-import{i as t,_ as o,s as e,y as s,a}from"./chunk-query-assigned-elements.js";import{t as l}from"./chunk-state.js";import{A as i}from"./chunk-ArchAPI.js";import{a as c,h as n}from"./chunk-helpers.js";import"./chunk-arch-card.js";import"./arch-loading-indicator.js";import{g as r,c as d}from"./chunk-styles.js";import"./chunk-constants.js";import"./arch-tooltip.js";import"./chunk-scale-large.js";import"./chunk-focusable.js";import"./chunk-sp-overlay.js";var h,m=[r,d,t`
+import{i as t,_ as o,e,s,y as l,a as i}from"./chunk-query-assigned-elements.js";import{t as a}from"./chunk-state.js";import{A as c}from"./chunk-ArchAPI.js";import{a as n,h as r}from"./chunk-helpers.js";import"./chunk-arch-card.js";import"./arch-loading-indicator.js";import{g as d,c as h}from"./chunk-styles.js";import"./chunk-constants.js";import"./arch-tooltip.js";import"./chunk-scale-large.js";import"./chunk-focusable.js";import"./chunk-sp-overlay.js";var m,u=[d,h,t`
     thead > tr.hidden-header {
       color: transparent;
     }
@@ -26,11 +26,11 @@ import{i as t,_ as o,s as e,y as s,a}from"./chunk-query-assigned-elements.js";im
     td.num-datasets {
       text-align: right;
     }
-  `];let u=h=class extends e{constructor(){super(),this.numTotalCollections=0,this.collections=void 0,this.initCollections()}render(){const{maxDisplayedCollections:t}=h,o=void 0===this.collections,e=this.numTotalCollections>0;return s`
+  `];let p=m=class extends s{constructor(){super(),this.hideCreateCustomCollection=!1,this.numTotalCollections=0,this.collections=void 0,this.initCollections()}render(){const{maxDisplayedCollections:t}=m,{hideCreateCustomCollection:o}=this,e=void 0===this.collections,s=this.numTotalCollections>0;return l`
       <arch-card
         title="Collections"
-        ctatext=${!o&&e?"Create Custom Collection":""}
-        ctahref="${c.buildSubCollection()}"
+        ctatext=${e||!s||o?"":"Create Custom Collection"}
+        ctahref="${n.buildSubCollection()}"
         ctaTooltipHeader="Custom Collection"
         ctaTooltipText="Combine and filter your collections into a Custom Collection of only the data you need."
         ctaTooltipLearnMoreUrl="https://arch-webservices.zendesk.com/hc/en-us/articles/16107865758228-How-to-create-a-custom-ARCH-collection"
@@ -39,7 +39,7 @@ import{i as t,_ as o,s as e,y as s,a}from"./chunk-query-assigned-elements.js";im
           <table>
             <thead>
               <tr
-                class="${o||!e?"hidden-header":""}"
+                class="${e||!s?"hidden-header":""}"
               >
                 <th class="name">Collection Name</th>
                 <th class="size">Collection Size</th>
@@ -47,13 +47,13 @@ import{i as t,_ as o,s as e,y as s,a}from"./chunk-query-assigned-elements.js";im
               </tr>
             </thead>
             <tbody>
-              ${(()=>{var a;return o?[s`
+              ${(()=>{var o;return e?[l`
               <tr>
                 <td colspan="3">
                   <arch-loading-indicator></arch-loading-indicator>
                 </td>
               </tr>
-            `]:e?(null!==(a=this.collections)&&void 0!==a?a:[]).slice(0,t).map((t=>s`
+            `]:s?(null!==(o=this.collections)&&void 0!==o?o:[]).slice(0,t).map((t=>l`
               <tr>
                 <td class="name">
                   <a
@@ -63,12 +63,12 @@ import{i as t,_ as o,s as e,y as s,a}from"./chunk-query-assigned-elements.js";im
                     ${t.name}
                   </a>
                 </td>
-                <td class="size">${n(t)}</td>
+                <td class="size">${r(t)}</td>
                 <td class="num-datasets">
                   ${t.dataset_count} Datasets
                 </td>
               </tr>
-            `)):[s`
+            `)):[l`
               <tr>
                 <td colspan="3">
                   <i
@@ -87,14 +87,14 @@ import{i as t,_ as o,s as e,y as s,a}from"./chunk-query-assigned-elements.js";im
           </table>
         </div>
         <div slot="footer">
-          ${o||!e?s``:s`
+          ${e||!s?l``:l`
                 <a href="/collections" class="view-all">
                   View
-                  ${this.numTotalCollections>t?s`All ${this.numTotalCollections}`:s``}
+                  ${this.numTotalCollections>t?l`All ${this.numTotalCollections}`:l``}
                   Collections
                 </a>
               `}
         </div>
       </arch-card>
-    `}async initCollections(){const t=await i.collections.get([["sort","=","-id"],["limit","=",h.maxDisplayedCollections]]);this.numTotalCollections=t.count,this.collections=t.items}};u.maxDisplayedCollections=10,u.styles=m,o([l()],u.prototype,"numTotalCollections",void 0),o([l()],u.prototype,"collections",void 0),u=h=o([a("arch-collections-card")],u);export{u as ArchCollectionsCard};
+    `}async initCollections(){const t=await c.collections.get([["sort","=","-id"],["limit","=",m.maxDisplayedCollections]]);this.numTotalCollections=t.count,this.collections=t.items}};p.maxDisplayedCollections=10,p.styles=u,o([e({type:Boolean,attribute:"hide-create-custom-collection"})],p.prototype,"hideCreateCustomCollection",void 0),o([a()],p.prototype,"numTotalCollections",void 0),o([a()],p.prototype,"collections",void 0),p=m=o([i("arch-collections-card")],p);export{p as ArchCollectionsCard};
 //# sourceMappingURL=arch-collections-card.js.map

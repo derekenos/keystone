@@ -3,6 +3,7 @@ import { Dataset } from "../../lib/types";
 import "../../archCard/index";
 import "../../archLoadingIndicator/index";
 export declare class ArchRecentDatasetsCard extends LitElement {
+    hideGenerateDataset: boolean;
     numTotalDatasets: number;
     datasets: undefined | Array<Dataset>;
     static maxDisplayedDatasets: number;
