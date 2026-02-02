@@ -192,7 +192,7 @@
         <arch-dataset-publishing-card
           datasetId="{{ dataset.id }}"
           csrfToken="{{ csrf_token }}"
-          {{ "" if is_owner else "readOnly" }}
+          {{ "" if is_owner and not disable_publishing else "readOnly" }}
         >
         </arch-dataset-publishing-card>
       </div>

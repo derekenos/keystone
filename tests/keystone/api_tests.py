@@ -126,13 +126,28 @@ class Client(_Client):
 # /api/users tests
 ###############################################################################
 
+#
+# GET /api/users tests
+#
+
 
 @mark.django_db
-def test_list_users(make_account, make_user):
-    """Users with role=ADMIN can list their account users."""
-    # Make a couple of same-account users.
-    account = make_account()
-    admin_user = make_user(account=account, role=UserRoles.ADMIN)
+@mark.parametrize(
+    "role,account_active,allowed",
+    (
+        (UserRoles.ADMIN, True, True),
+        (UserRoles.ADMIN, False, False),
+        (UserRoles.USER, True, False),
+        (UserRoles.VIEWER, True, False),
+    ),
+)
+def test_admin_can_list_active_account_users(
+    role, account_active, allowed, make_account, make_user
+):
+    """Only Admins of active accounts can list their account users."""
+    # Make some same-account users.
+    account = make_account(is_active=account_active)
+    user = make_user(account=account, role=role)
     normal_user = make_user(account=account)
 
     # Make a user in a different account, which we'll expect to be absent
@@ -141,29 +156,43 @@ def test_list_users(make_account, make_user):
     other_user = make_user(account=other_account)
 
     # Check that the ADMIN-type user can list their account users.
-    client = Client(admin_user)
+    client = Client(user)
     res = client.get("/api/users")
-    assert res.status_code == HTTPStatus.OK
-    data = res.json()
-    assert {user["id"] for user in data["items"]} == {admin_user.id, normal_user.id}
+    if allowed:
+        assert res.status_code == HTTPStatus.OK
+        data = res.json()
+        assert {user["id"] for user in data["items"]} == {user.id, normal_user.id}
+    else:
+        assert res.status_code == HTTPStatus.FORBIDDEN
+        assert res.json() == {"detail": "FORBIDDEN"}
 
-    # Check that the account is inferred from the requesting user and that
-    # specifying a different account has not effect.
-    res = client.get(f"/api/users?account_id={other_account.id}")
-    assert res.status_code == HTTPStatus.OK
-    data = res.json()
-    assert {user["id"] for user in data["items"]} == {admin_user.id, normal_user.id}
 
-    # Check that the non-ADMIN user is denied access.
-    client.force_login(normal_user)
-    res = client.get(f"/api/users")
-    assert res.status_code == HTTPStatus.FORBIDDEN
-    assert res.json() == {"detail": "FORBIDDEN"}
+@mark.django_db
+@mark.parametrize(
+    "query_param_str_fn,status_code",
+    (
+        (lambda u: "", HTTPStatus.OK),
+        (lambda u: f"?account_id={u.account_id}", HTTPStatus.OK),
+        (lambda u: f"?account_id={u.account_id + 1}", HTTPStatus.FORBIDDEN),
+    ),
+)
+def test_admin_cant_list_other_account_users(
+    query_param_str_fn, status_code, make_user
+):
+    """Though no account_id param is expected / required in the request to /api/users
+    (the ultimate account ID is inferred from the requesting user), if it was specified,
+    check that attempting to retrieve users in a different account is not allowed.
+    """
+    admin = make_user(role=UserRoles.ADMIN)
+    res = Client(admin).get(f"/api/users{query_param_str_fn(admin)}")
+    assert res.status_code == status_code
+    if status_code == HTTPStatus.OK:
+        assert {user["id"] for user in res.json()["items"]} == {admin.id}
 
 
 @mark.django_db
 def test_admin_can_get_any_same_account_user(make_account, make_user):
-    """An admin user can get any same-account user."""
+    """Admins can retrieve any same-account user."""
     account = make_account()
     admin_user = make_user(account=account, role=UserRoles.ADMIN)
     other_admin = make_user(account=account, role=UserRoles.ADMIN)
@@ -177,7 +206,7 @@ def test_admin_can_get_any_same_account_user(make_account, make_user):
 
 @mark.django_db
 def test_admin_cant_get_different_account_user(make_account, make_user):
-    """An admin user can get a different-account user."""
+    """Admins can not retrieve a different-account user."""
     admin_user = make_user(account=make_account(), role=UserRoles.ADMIN)
     other_account = make_account()
     other_account_admin = make_user(account=other_account, role=UserRoles.ADMIN)
@@ -189,10 +218,11 @@ def test_admin_cant_get_different_account_user(make_account, make_user):
 
 
 @mark.django_db
-def test_normal_user_can_only_get_self(make_account, make_user):
-    """A non-Admin user can only get their own user."""
+@mark.parametrize("role", (UserRoles.USER, UserRoles.VIEWER))
+def test_non_admins_can_only_get_self(role, make_account, make_user):
+    """Non-admins can only retrieve their own user."""
     account = make_account()
-    user = make_user(account=account, role=UserRoles.USER)
+    user = make_user(account=account, role=role)
     other_admin = make_user(account=account, role=UserRoles.ADMIN)
     other_user = make_user(account=account, role=UserRoles.USER)
     other_account = make_account()
@@ -211,13 +241,18 @@ def test_normal_user_can_only_get_self(make_account, make_user):
         assert res.status_code == HTTPStatus.FORBIDDEN
 
 
+#
+# PUT /api/users tests
+#
+
+
 @mark.django_db
 @mark.parametrize("send_welcome_email", [True, False])
 @patch("keystone.api.send_email")
 def test_admin_can_create_same_account_user(
     jobmail_send, send_welcome_email, make_account, make_user, make_create_user_dict
 ):
-    """Users with role=ADMIN can create same-account users."""
+    """Admins can create same-account users."""
     account = make_account()
     admin_user = make_user(account=account, role=UserRoles.ADMIN)
 
@@ -250,7 +285,7 @@ def test_admin_can_create_same_account_user(
 
 
 @mark.django_db
-@mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER))
+@mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER, UserRoles.VIEWER))
 def test_no_user_can_create_other_account_user(
     role, make_account, make_user, make_create_user_dict
 ):
@@ -269,14 +304,17 @@ def test_no_user_can_create_other_account_user(
 
 
 @mark.django_db
-def test_non_admin_cant_create_user(make_account, make_user, make_create_user_dict):
-    """Users with role=USER can not create users."""
+@mark.parametrize("role", (UserRoles.USER, UserRoles.VIEWER))
+def test_non_admins_cant_create_users(
+    role, make_account, make_user, make_create_user_dict
+):
+    """Non-admins can not create users."""
     account = make_account()
-    normal_user = make_user(account=account, role=UserRoles.USER)
+    user = make_user(account=account, role=role)
 
     # Attempt to create the user.
     new_user_d = make_create_user_dict(account)
-    res = Client(normal_user).create_user(new_user_d, False)
+    res = Client(user).create_user(new_user_d, False)
 
     # Check that the user was not created.
     assert res.status_code == HTTPStatus.FORBIDDEN
@@ -284,9 +322,75 @@ def test_non_admin_cant_create_user(make_account, make_user, make_create_user_di
         User.objects.get(username=new_user_d["username"])
 
 
+#
+# PATCH /api/users tests
+#
+
+
+@mark.django_db
+@mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER, UserRoles.VIEWER))
+def test_all_users_can_update_self(role, make_account, make_user):
+    """All users cam update themselves (less username, role, and teams)"""
+    user = make_user(account=make_account(), role=role)
+    new_email = "new@email.com"
+    assert new_email != user.email
+    res = Client(user).update_user(user, {"email": new_email})
+    assert res.status_code == HTTPStatus.OK
+    user.refresh_from_db()
+    assert user.email == new_email
+
+
+@mark.django_db
+@mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER, UserRoles.VIEWER))
+def test_username_can_not_be_updated(role, make_account, make_user):
+    """Updates to username are not allowed."""
+    user = make_user(account=make_account(), role=role)
+    old_username = user.username
+    new_username = "new username"
+    assert new_username != old_username
+    res = Client(user).update_user(user, {"username": new_username})
+    assert res.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    user.refresh_from_db()
+    assert user.username == old_username
+
+
+@mark.django_db
+@mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER, UserRoles.VIEWER))
+def test_no_user_can_update_own_role(role, make_account, make_user):
+    """No user can update their own role."""
+    admin_user = make_user(account=make_account(), role=role)
+    res = Client(admin_user).update_user(
+        admin_user,
+        {"role": UserRoles.USER if role == UserRoles.ADMIN else UserRoles.ADMIN},
+    )
+    assert res.status_code == HTTPStatus.FORBIDDEN
+    assert res.json()["detail"] == "self role modification not allowed"
+
+
+@mark.django_db
+def test_admin_can_update_own_teams(make_account, make_user, make_team):
+    """Admins can update their own teams."""
+    admin_user = make_user(account=make_account(), role=UserRoles.ADMIN)
+    team = make_team(account=admin_user.account)
+    res = Client(admin_user).update_user(admin_user, {"teams": [model_to_dict(team)]})
+    assert res.status_code == HTTPStatus.OK
+    admin_user.refresh_from_db()
+    assert tuple(admin_user.teams.all()) == (team,)
+
+
+@mark.django_db
+@mark.parametrize("role", (UserRoles.USER, UserRoles.VIEWER))
+def test_non_admins_cant_update_own_teams(role, make_user, make_team):
+    """Non-admins can not update their own teams."""
+    user = make_user(role=role)
+    team = make_team(account=user.account)
+    res = Client(user).update_user(user, {"teams": [model_to_dict(team)]})
+    assert res.status_code == HTTPStatus.FORBIDDEN
+
+
 @mark.django_db
 def test_admin_can_update_same_account_user(make_account, make_user):
-    """Users with role=ADMIN can update a same-account user."""
+    """Admins can update any same-account user."""
     account = make_account()
     admin_user = make_user(account=account, role=UserRoles.ADMIN)
     normal_user = make_user(account=account, role=UserRoles.USER)
@@ -307,69 +411,11 @@ def test_admin_can_update_same_account_user(make_account, make_user):
 
 
 @mark.django_db
-def test_admin_can_not_update_own_role(make_account, make_user):
-    """Users with role=ADMIN can not update their own role."""
-    admin_user = make_user(account=make_account(), role=UserRoles.ADMIN)
-    res = Client(admin_user).update_user(admin_user, {"role": UserRoles.USER})
-    assert res.status_code == HTTPStatus.FORBIDDEN
-    assert res.json()["detail"] == "self role modification not allowed"
-
-
-@mark.django_db
-def test_admin_can_update_own_teams(make_account, make_user, make_team):
-    """Users with role=ADMIN can update their own teams."""
-    admin_user = make_user(account=make_account(), role=UserRoles.ADMIN)
-    team = make_team(account=admin_user.account)
-    res = Client(admin_user).update_user(admin_user, {"teams": [model_to_dict(team)]})
-    assert res.status_code == HTTPStatus.OK
-    admin_user.refresh_from_db()
-    assert tuple(admin_user.teams.all()) == (team,)
-
-
-@mark.django_db
-@mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER))
-def test_no_user_can_update_other_account_user(role, make_account, make_user):
-    """No user is allowed to update another account's user."""
-    user = make_user(account=make_account(), role=role)
-    other_account_user = make_user(account=make_account(), role=UserRoles.USER)
-    res = Client(user).update_user(other_account_user, {"email": "new@email.com"})
-    assert res.status_code == HTTPStatus.FORBIDDEN
-
-
-@mark.django_db
-def test_non_admin_can_update_self(make_account, make_user):
-    """Users with role=USER are allowed to update themselves less role and teams."""
-    user = make_user(account=make_account(), role=UserRoles.USER)
-    new_email = "new@email.com"
-    assert new_email != user.email
-    res = Client(user).update_user(user, {"email": new_email})
-    assert res.status_code == HTTPStatus.OK
-    user.refresh_from_db()
-    assert user.email == new_email
-
-
-@mark.django_db
-def test_non_admin_can_not_update_own_role(make_user, make_team):
-    """Users with role=USER are not allowed to update their own role."""
-    user = make_user(role=UserRoles.USER)
-    res = Client(user).update_user(user, {"role": UserRoles.ADMIN})
-    assert res.status_code == HTTPStatus.FORBIDDEN
-
-
-@mark.django_db
-def test_non_admin_can_not_update_own_teams(make_user, make_team):
-    """Users with role=USER are not allowed to update their own teams."""
-    user = make_user(role=UserRoles.USER)
-    team = make_team(account=user.account)
-    res = Client(user).update_user(user, {"teams": [model_to_dict(team)]})
-    assert res.status_code == HTTPStatus.FORBIDDEN
-
-
-@mark.django_db
-def test_non_admin_cant_update_other_users(make_account, make_user):
-    """Users with role=USER are not allowed to update anyone but themselves."""
+@mark.parametrize("role", (UserRoles.USER, UserRoles.VIEWER))
+def test_non_admins_cant_update_other_users(role, make_account, make_user):
+    """Non-admins can not update other users."""
     account = make_account()
-    user = make_user(account=account, role=UserRoles.USER)
+    user = make_user(account=account, role=role)
 
     # Test a same-account user.
     other_user = make_user(account=account, role=UserRoles.USER)
@@ -383,17 +429,13 @@ def test_non_admin_cant_update_other_users(make_account, make_user):
 
 
 @mark.django_db
-@mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER))
-def test_username_can_not_be_updated(role, make_account, make_user):
-    """Updates to username are not allowed."""
+@mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER, UserRoles.VIEWER))
+def test_no_user_can_update_other_account_user(role, make_account, make_user):
+    """No user is allowed to update another account's user."""
     user = make_user(account=make_account(), role=role)
-    old_username = user.username
-    new_username = "new username"
-    assert new_username != old_username
-    res = Client(user).update_user(user, {"username": new_username})
-    assert res.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
-    user.refresh_from_db()
-    assert user.username == old_username
+    other_account_user = make_user(account=make_account(), role=UserRoles.USER)
+    res = Client(user).update_user(other_account_user, {"email": "new@email.com"})
+    assert res.status_code == HTTPStatus.FORBIDDEN
 
 
 ###############################################################################
@@ -420,7 +462,7 @@ def test_any_user_can_list_account_teams(make_user, make_team):
 
 @mark.django_db
 def test_admin_can_create_same_account_team(make_user):
-    """An ADMIN-type user can create an account team."""
+    """Admins can create an account team."""
     user = make_user(role=UserRoles.ADMIN)
     team_name = baker.prepare(Team).name
     client = Client(user)
@@ -431,8 +473,8 @@ def test_admin_can_create_same_account_team(make_user):
 
 
 @mark.django_db
-def test_admin_can_not_create_different_account_team(make_account, make_user):
-    """An ADMIN-type user can not create a team in a different account."""
+def test_admin_cant_create_different_account_team(make_account, make_user):
+    """Admins can not create a team in a different account."""
     user = make_user(role=UserRoles.ADMIN)
     other_account = make_account()
     res = Client(user).create_team({"account_id": other_account.id, "name": "test"})
@@ -440,9 +482,10 @@ def test_admin_can_not_create_different_account_team(make_account, make_user):
 
 
 @mark.django_db
-def test_non_admin_not_create_any_team(make_account, make_user):
-    """A normal user can not create a team in their own or other account."""
-    user = make_user()
+@mark.parametrize("role", (UserRoles.USER, UserRoles.VIEWER))
+def test_non_admin_cant_create_teams(role, make_account, make_user):
+    """Non-admins can not create a team in their own or other account."""
+    user = make_user(role=role)
     for account in (user.account, make_account()):
         res = Client(user).create_team({"account_id": account.id, "name": "test"})
         assert res.status_code == HTTPStatus.FORBIDDEN
@@ -450,7 +493,7 @@ def test_non_admin_not_create_any_team(make_account, make_user):
 
 @mark.django_db
 def test_admin_can_edit_account_team(make_user, make_team):
-    """An ADMIN-type user can edit an account team."""
+    """Admins can edit any account team."""
     user = make_user(role=UserRoles.ADMIN)
     team = make_team(account=user.account)
     new_name = baker.prepare(Team).name
@@ -462,7 +505,19 @@ def test_admin_can_edit_account_team(make_user, make_team):
 
 
 @mark.django_db
-@mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER))
+@mark.parametrize("role", (UserRoles.USER, UserRoles.VIEWER))
+def test_non_admins_cant_edit_teams(role, make_user, make_team):
+    """Non-admins can not edit teams."""
+    user = make_user(role=role)
+    team = make_team(account=user.account)
+    new_name = baker.prepare(Team).name
+    assert new_name != team.name
+    res = Client(user).update_team(team, {"name": new_name})
+    assert res.status_code == HTTPStatus.FORBIDDEN
+
+
+@mark.django_db
+@mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER, UserRoles.VIEWER))
 def test_no_user_can_edit_other_account_team(role, make_user, make_team):
     """No user is allowed to edit another account's team."""
     user = make_user(role=role)
@@ -573,9 +628,11 @@ def test_dataset_no_implicit_global_access(
 
 
 @mark.django_db
-def test_dataset_owner_can_update_teams(make_team, make_user, make_user_dataset):
-    """A dataset owner can update the teams with which the dataset is shared."""
-    user = make_user()
+@mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER, UserRoles.VIEWER))
+def test_dataset_owner_can_update_teams(role, make_team, make_user, make_user_dataset):
+    """A dataset owner (including viewers) can update the teams with which the
+    dataset is shared."""
+    user = make_user(role=role)
     team1 = make_team(account=user.account)
     team2 = make_team(account=user.account)
     team3 = make_team(account=user.account)
@@ -588,12 +645,13 @@ def test_dataset_owner_can_update_teams(make_team, make_user, make_user_dataset)
 
 
 @mark.django_db
-def test_dataset_owner_can_not_update_teams_with_nonmember_team(
-    make_team, make_user, make_user_dataset
+@mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER, UserRoles.VIEWER))
+def test_dataset_owner_cant_update_teams_with_nonmember_team(
+    role, make_team, make_user, make_user_dataset
 ):
-    """A dataset owner is not allowed to share a dataset to a team of which they're
+    """A dataset owner is not allowed to share a dataset with a team of which they're
     not a member."""
-    user = make_user()
+    user = make_user(role=role)
     team = make_team(account=user.account)
     dataset = make_user_dataset(user)
     res = Client(user).update_dataset_teams(dataset.id, [team])
@@ -602,12 +660,13 @@ def test_dataset_owner_can_not_update_teams_with_nonmember_team(
 
 
 @mark.django_db
-def test_non_dataset_owner_can_not_update_teams(
-    make_team, make_user, make_user_dataset
+@mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER, UserRoles.VIEWER))
+def test_non_dataset_owner_cant_update_teams(
+    role, make_team, make_user, make_user_dataset
 ):
     """A user is not allowed to update the teams of a dataset that they don't own."""
     # Create a dataset owner and dataset.
-    owner = make_user()
+    owner = make_user(role=role)
     dataset = make_user_dataset(owner)
     # Create a non-owner user, put them on a team with owner, and authorize the team to
     # access the dataset so that the dataset lookup in the API doesn't result in a 404.
@@ -753,10 +812,11 @@ def test_only_collection_name_can_be_updated(
 
 
 @mark.django_db
-def test_collection_user_settings_update(make_user, make_collection):
+@mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER, UserRoles.VIEWER))
+def test_collection_user_settings_update(role, make_user, make_collection):
     """The Collection endpoint supports creation / update of associated CollectionUserSettings
     instances via the "user_settings" payload field."""
-    user = make_user()
+    user = make_user(role=role)
     collection = make_collection(accounts=(user.account,))
     client = Client(user)
     # opted_out_count is always an integer when opted_out query param is not specified.
@@ -812,13 +872,32 @@ def test_normal_user_can_rename_own_custom_collection(
 
 
 @mark.django_db
-@mark.parametrize("collection_type", ("AIT", "CUSTOM", "SPECIAL"))
-def test_normal_user_can_not_update_nonowned_noncustom_collection(
-    collection_type, make_collection, make_user
+def test_viewer_cant_rename_own_custom_collection(
+    make_collection, make_user, make_jobstart
 ):
-    """A normal user does not have permission to update the name of any
+    """Viewers can't rename a custom collection that they created."""
+    user = make_user(role=UserRoles.VIEWER)
+    collection = make_collection(
+        collection_type=CollectionTypes.CUSTOM, name="original name"
+    )
+    make_jobstart(
+        collection=collection,
+        user=user,
+        job_type_id=KnownArchJobUuids.USER_DEFINED_QUERY,
+    )
+    res = Client(user).update_collection(collection, {"name": "new name"})
+    assert res.status_code == HTTPStatus.FORBIDDEN
+
+
+@mark.django_db
+@mark.parametrize("role", (UserRoles.USER, UserRoles.VIEWER))
+@mark.parametrize("collection_type", ("AIT", "CUSTOM", "SPECIAL"))
+def test_non_admins_cant_update_nonowned_noncustom_collection(
+    role, collection_type, make_collection, make_user
+):
+    """Non-admins do not have permission to update the name of any
     collection that is not a custom collection that they created."""
-    user = make_user()
+    user = make_user(role=role)
     collection = make_collection(
         collection_type=getattr(CollectionTypes, collection_type),
         # Excessively authorize user read access

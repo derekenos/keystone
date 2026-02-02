@@ -1,5 +1,5 @@
 import { LitElement, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 
 import ArchAPI from "../../lib/ArchAPI";
 import { Paths } from "../../lib/helpers";
@@ -13,6 +13,9 @@ import styles from "./styles";
 
 @customElement("arch-recent-datasets-card")
 export class ArchRecentDatasetsCard extends LitElement {
+  @property({ type: Boolean, attribute: "hide-generate-dataset" })
+  hideGenerateDataset = false;
+
   @state() numTotalDatasets = 0;
   @state() datasets: undefined | Array<Dataset> = undefined;
 
@@ -25,7 +28,7 @@ export class ArchRecentDatasetsCard extends LitElement {
   }
 
   render() {
-    const { numTotalDatasets } = this;
+    const { numTotalDatasets, hideGenerateDataset } = this;
     const isLoading = this.datasets === undefined;
     // Note that the value of hasDatasets is only valid when isLoading=false;
     const hasDatasets = (this.datasets ?? []).length > 0;
@@ -46,9 +49,16 @@ export class ArchRecentDatasetsCard extends LitElement {
               <td colspan="3">
                 <i>
                   No datasets have been generated.
-                  <a href="/datasets/generate" title="Generate a new dataset">
-                    Generate a new dataset
-                  </a>
+                  ${hideGenerateDataset
+                    ? html``
+                    : html`
+                        <a
+                          href="/datasets/generate"
+                          title="Generate a new dataset"
+                        >
+                          Generate a new dataset
+                        </a>
+                      `}
                 </i>
               </td>
             </tr>`,
@@ -77,8 +87,8 @@ export class ArchRecentDatasetsCard extends LitElement {
     return html`
       <arch-card
         title="Recent Datasets"
-        ctatext="Generate New Dataset"
-        ctahref="/datasets/generate"
+        ctatext=${hideGenerateDataset ? "" : "Generate New Dataset"}
+        ctahref=${hideGenerateDataset ? "" : "/datasets/generate"}
       >
         <div slot="content">
           <table>

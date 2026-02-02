@@ -63,7 +63,13 @@ urlpatterns = [
         views.dataset_file_colab,
         name="dataset-file-colab",
     ),
-    path("login/", auth_views.LoginView.as_view(), name="login"),
+    path(
+        "login/",
+        auth_views.LoginView.as_view(
+            authentication_form=keystone_forms.KeystoneAuthenticationForm
+        ),
+        name="login",
+    ),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path(
         "accounts/password_change/",

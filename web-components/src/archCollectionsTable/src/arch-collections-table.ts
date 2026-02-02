@@ -25,6 +25,10 @@ import Styles from "./styles";
 @customElement("arch-collections-table")
 export class ArchCollectionsTable extends ArchDataTable<Collection> {
   @property({ type: Boolean, attribute: "show-hidden" }) showHidden = false;
+  @property({ type: Boolean, attribute: "hide-generate-dataset" })
+  hideGenerateDataset = false;
+  @property({ type: Boolean, attribute: "hide-create-custom-collection" })
+  hideCreateCustomCollection = false;
 
   static styles = [...ArchDataTable.styles, ...Styles];
 
@@ -84,21 +88,27 @@ export class ArchCollectionsTable extends ArchDataTable<Collection> {
   willUpdate(_changedProperties: PropertyValues) {
     super.willUpdate(_changedProperties);
 
-    const { showHidden } = this;
+    const { showHidden, hideGenerateDataset, hideCreateCustomCollection } =
+      this;
 
+    this.actionButtonLabels = [];
+    this.actionButtonSignals = [];
+    this.actionButtonDisabledTitles = [];
     if (!showHidden) {
-      this.actionButtonLabels = [
-        "Generate Dataset",
-        "Create Custom Collection",
-      ];
-      this.actionButtonSignals = [
-        Topics.GENERATE_DATASET,
-        Topics.CREATE_SUB_COLLECTION,
-      ];
-      this.actionButtonDisabledTitles = [
-        "Select a single collection below to generate a dataset",
-        "Select one or more of the Archive-It, Custom, or Special-type collections below to create a custom collection",
-      ];
+      if (!hideGenerateDataset) {
+        this.actionButtonLabels.push("Generate Dataset");
+        this.actionButtonSignals.push(Topics.GENERATE_DATASET);
+        this.actionButtonDisabledTitles.push(
+          "Select a single collection below to generate a dataset"
+        );
+      }
+      if (!hideCreateCustomCollection) {
+        this.actionButtonLabels.push("Create Custom Collection");
+        this.actionButtonSignals.push(Topics.CREATE_SUB_COLLECTION);
+        this.actionButtonDisabledTitles.push(
+          "Select one or more of the Archive-It, Custom, or Special-type collections below to create a custom collection"
+        );
+      }
     }
     this.apiCollectionEndpoint = "/collections";
     this.apiItemResponseIsArray = true;
@@ -161,7 +171,8 @@ export class ArchCollectionsTable extends ArchDataTable<Collection> {
       }
       return null;
     };
-    this.selectable = !showHidden;
+    this.selectable =
+      !showHidden && !(hideGenerateDataset && hideCreateCustomCollection);
     this.sort = "-id";
     this.sortableColumns = [true, true, false, true, true];
     this.filterableColumns = [false, true];

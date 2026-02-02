@@ -36,7 +36,7 @@
 <script src="{{ static('/js/arch-dataset-teams-selector.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-dataset-settings-button.js') }}" type="module"></script>
 <script src="{{ static('/js/arch-tooltip.js') }}" type="module"></script>
-{% if not publishing_disabled and dataset.job_start.job_type.can_publish %}
+{% if not omit_publishing and dataset.job_start.job_type.can_publish %}
 <script src="{{ static('/js/arch-dataset-publishing-card.js') }}" type="module"></script>
 {% endif %}
 
@@ -211,7 +211,7 @@
               <i class="fa fa-cloud-download fa-5x"></i>
               <p class="card-text center">Download</p>
             </a>
-            {% if not colab_disabled and file.filename in settings.SUPPORTED_COLAB_JOBFILE_FILENAMES %}
+            {% if not omit_colab and file.filename in settings.SUPPORTED_COLAB_JOBFILE_FILENAMES %}
             <div class="colab-wrapper">
               {% if file.size_bytes < settings.COLAB_MAX_FILE_SIZE_BYTES %}
               <a href="{{ url('dataset-file-colab', args=[dataset.id, file.filename]) }}" target="_blank" class="colab">
@@ -267,7 +267,7 @@
     </div>
     {% endif %}
 
-    {% if not publishing_disabled and dataset.job_start.job_type.can_publish %}
+    {% if not omit_publishing and dataset.job_start.job_type.can_publish %}
     <h2 id="publishing">Publishing</h2>
     {% if is_owner %}
     <p>Publish this dataset to <a href="https://archive.org">archive.org</a> for public access.</p>
@@ -279,7 +279,7 @@
         <arch-dataset-publishing-card
           datasetId="{{ dataset.id }}"
           csrfToken="{{ csrf_token }}"
-          {{ "" if is_owner else "readOnly" }}
+          {{ "" if is_owner and not disable_publishing else "readOnly" }}
         >
         </arch-dataset-publishing-card>
       </div>

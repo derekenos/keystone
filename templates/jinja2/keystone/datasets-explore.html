@@ -18,9 +18,11 @@ Datasets
           <div class="left subnav-link ng-scope research_services active">
             <span class="ng-scope"><a class="ng-binding ng-scope" href="{{ url('datasets-explore') }}">Explore</a></span>
           </div>
+         {% if can_generate_dataset %}
           <div class="left subnav-link ng-scope research_services">
             <span class="ng-scope"><a class="ng-binding ng-scope" href="{{ url('datasets-generate') }}">Generate</a></span>
           </div>
+          {% endif %}
           <hr />
         </div>
       </div>
@@ -32,7 +34,9 @@ Datasets
 {% block content %}
 <div class="row">
   <div class="large-12 columns" id="data-table-container">
-    <arch-dataset-explorer-table></arch-dataset-explorer-table>
+    <arch-dataset-explorer-table
+      {{ "" if can_generate_dataset else "hide-generate-dataset" }}
+    ></arch-dataset-explorer-table>
   </div>
 </div>
 {% endblock %}

@@ -1,9 +1,14 @@
+import os
 from http import HTTPStatus
+from unittest.mock import patch
 
-from django.test import Client as _Client
+from django.http import HttpResponse
+from django.test import Client as _Client, override_settings
 from pytest import mark
 
 from config.settings import COLAB_MAX_FILE_SIZE_BYTES
+
+from keystone.models import UserRoles
 
 
 ###############################################################################
@@ -31,9 +36,9 @@ def test_dataset_file_colab_file_size_limit(
     """
     user = make_user()
     dataset = make_user_dataset(user)
-    job_complete = make_jobcomplete(job_start=dataset.job_start)
     job_file = make_jobfile(
-        job_complete=job_complete, size_bytes=COLAB_MAX_FILE_SIZE_BYTES + 1
+        job_complete=dataset.job_start.jobcomplete,
+        size_bytes=COLAB_MAX_FILE_SIZE_BYTES + 1,
     )
 
     client = Client(user)
@@ -43,3 +48,66 @@ def test_dataset_file_colab_file_size_limit(
         res.content.decode()
         == f"File size ({job_file.size_bytes}) exceeds max supported Google Colab size ({COLAB_MAX_FILE_SIZE_BYTES})"
     )
+
+
+@mark.django_db
+@mark.parametrize(
+    "role,status_code",
+    (
+        (UserRoles.USER, HTTPStatus.OK),
+        (UserRoles.VIEWER, HTTPStatus.FORBIDDEN),
+    ),
+)
+@patch("keystone.arch_api.ArchAPI.proxy_colab_redirect")
+def test_dataset_file_colab_disallows_inactive_user(
+    proxy_colab_redirect, role, status_code, make_user, make_user_dataset
+):
+    """A viewer user is not allowed to access the colab view."""
+    proxy_colab_redirect.return_value = HttpResponse()
+    user = make_user(role=role)
+    dataset = make_user_dataset(user)
+    filename = dataset.job_start.jobcomplete.jobfile_set.first().filename
+    assert (
+        Client(user).get(f"/datasets/{dataset.id}/files/{filename}/colab").status_code
+        == status_code
+    )
+
+
+@mark.django_db
+@override_settings(
+    ALLOW_INACTIVE_USER_AS_VIEWER=False,
+    AUTHENTICATION_BACKENDS=["django.contrib.auth.backends.ModelBackend"],
+)
+def test_inactive_user_cant_login_when_ALLOW_INACTIVE_USER_AS_VIEWER_notset(
+    settings, make_user
+):
+    """An inactive user is not allowed to log in when ALLOW_INACTIVE_USER_AS_VIEWER=False
+    and AUTHENTICATION_BACKENDS does not include AllowAllUsersModelBackend.
+    """
+    user = make_user(is_active=False)
+    user.set_password("password")
+    user.save()
+    assert (
+        _Client()
+        .post("/login/", {"username": user.username, "password": "password"})
+        .status_code
+        == HTTPStatus.OK
+    )
+
+
+@mark.django_db
+@override_settings(
+    ALLOW_INACTIVE_USER_AS_VIEWER=True,
+    AUTHENTICATION_BACKENDS=["django.contrib.auth.backends.AllowAllUsersModelBackend"],
+)
+def test_inactive_user_can_login_when_ALLOW_INACTIVE_USER_AS_VIEWER_isset(
+    settings, make_user
+):
+    """An inactive user is allowed to log in when ALLOW_INACTIVE_USER_AS_VIEWER=True and
+    AUTHENTICATION_BACKENDS does include AllowAllUsersModelBackend.
+    """
+    user = make_user(is_active=False)
+    user.set_password("password")
+    user.save()
+    res = _Client().post("/login/", {"username": user.username, "password": "password"})
+    assert res.status_code == HTTPStatus.FOUND and res.headers.get("location") == "/"

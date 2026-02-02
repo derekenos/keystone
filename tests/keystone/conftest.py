@@ -4,6 +4,7 @@ from pytest import fixture
 
 from keystone import models
 from config.settings import (
+    COLAB_MAX_FILE_SIZE_BYTES,
     GLOBAL_DATASETS_TEAM_NAME,
     GLOBAL_USER_USERNAME,
     GLOBAL_USER_ACCOUNT_NAME,
@@ -117,7 +118,9 @@ def make_user():
 
 
 @fixture
-def make_user_dataset(make_collection, make_dataset, make_jobstart):
+def make_user_dataset(
+    make_collection, make_dataset, make_jobstart, make_jobcomplete, make_jobfile
+):
     def f(user, collection=None):
         # Creating a JobStart for a JobType with can_run = True will result in
         # the automatic creation of a Dataset.
@@ -128,6 +131,8 @@ def make_user_dataset(make_collection, make_dataset, make_jobstart):
             job_type=models.JobType.objects.get(id=KnownArchJobUuids.DOMAIN_FREQUENCY),
             user=user,
         )
+        job_complete = make_jobcomplete(job_start=job_start)
+        make_jobfile(job_complete=job_complete, size_bytes=COLAB_MAX_FILE_SIZE_BYTES)
         dataset = models.Dataset.objects.get(job_start=job_start)
         dataset.state = models.JobEventTypes.FINISHED
         dataset.save()
