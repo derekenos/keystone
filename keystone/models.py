@@ -4,6 +4,7 @@ from collections import defaultdict, namedtuple
 from functools import reduce
 from operator import or_
 
+from django.conf import settings as django_settings
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.contrib.contenttypes.models import ContentType
@@ -148,8 +149,10 @@ class User(AbstractUser):
         and never with a non-None obj value, so our handling here of non-None obj
         values is specific to our application.
         """
-        # Inactive users don't have any permissions.
-        if not self.is_active:
+        # Unless ALLOW_INACTIVE_USER_AS_VIEWER is set, inactive users don't
+        # have any permissions. Access ALLOW_INACTIVE_USER_AS_VIEWER via the Django
+        # settings object so that tests can leverage override_settings().
+        if not self.is_active and not django_settings.ALLOW_INACTIVE_USER_AS_VIEWER:
             return False
         # Superusers have all permissions.
         if self.is_superuser:

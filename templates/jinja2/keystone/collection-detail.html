@@ -60,6 +60,11 @@
    display: block;
    margin-top: 1rem;
  }
+
+ span.inaccessible-collection {
+   color: rgb(106, 109, 112);
+   cursor: not-allowed;
+ }
 </style>
 
 <script>
@@ -161,9 +166,18 @@
         <ul>
           {% for input_collection in configuration_info["input_collections"] %}
           <li>
+            {% if user.has_perm(Permissions.VIEW_COLLECTION, input_collection) %}
             <a href="{{ url('collection-detail', args=(input_collection.id,)) }}">
               {{ input_collection.name }}
             </a>
+            {% else %}
+            <span
+              class="inaccessible-collection"
+              title="You are not authorized to access this collection"
+            >
+              {{ input_collection.name }}
+            </span>
+            {% endif %}
           </li>
           {% endfor %}
         </ul>
