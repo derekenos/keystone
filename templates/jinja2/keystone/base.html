@@ -83,7 +83,7 @@
             <li><a href="{{ url('dashboard') }}">Dashboard</a></li>
             <li><a href="{{ url('collections') }}">Collections</a></li>
             <li><a href="{{ url('datasets-explore') }}">Datasets</a></li>
-            {% if request.user.role == "ADMIN" %}<li><a href="{{ url('account') }}">Account</a></li>{% endif %}
+            {% if request.user.has_perm(Permissions.LIST_ACCOUNT_USERS) %}<li><a href="{{ url('account') }}">Account</a></li>{% endif %}
             {% if request.user.is_staff %}<li><a href="{{ url('admin:index') }}">Admin</a></li>{% endif %}
             {% endif %}
           </ul>

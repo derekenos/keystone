@@ -88,7 +88,6 @@ from .models import (
     JobType,
     Team,
     User,
-    UserRoles,
 )
 from .permissions import Permissions
 from .schemas import (
@@ -190,19 +189,32 @@ class BasicAuth(HttpBasicAuth):
 ###############################################################################
 
 
-def require_active_admin(func):
-    """Route decorator to enforce that the requesting user is an admin of an
-    active account.
+def user_passes_test(test_fn):
+    """Adapted from Django's contrib.auth.decorators.user_passes_test()"""
+
+    def decorator(func):
+        """Route decorator to enforce that the requesting user is an admin of an
+        active account.
+        """
+
+        @wraps(func)
+        def wrapper(request, *args, **kwargs):
+            if not test_fn(request.user):
+                raise PermissionDenied
+            return func(request, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def require_permission(perm_name):
+    """Decorator to forbid request if doesn't possess the specified permission.
+    We pass the permission name instead of a reference to the Permissions object
+    attribute because the latter requires that the database connection be established
+    which may not yet true at module load time.
     """
-
-    @wraps(func)
-    def wrapper(request, *args, **kwargs):
-        user = request.user
-        if user.role != UserRoles.ADMIN or not user.account.is_active:
-            raise PermissionDenied
-        return func(request, *args, **kwargs)
-
-    return wrapper
+    return user_passes_test(lambda user: user.has_perm(getattr(Permissions, perm_name)))
 
 
 ###############################################################################
@@ -992,7 +1004,7 @@ def list_available_jobs(request, collection_id: Optional[int] = None):
 
 @public_api.get("/users", response=List[UserSchema])
 @paginate
-@require_active_admin
+@require_permission("LIST_ACCOUNT_USERS")
 def list_account_users(request, filters: UserFilterSchema = Query(...)):
     """Return the users that are members of the requesting ADMIN-type user's
     account."""
@@ -1013,6 +1025,7 @@ def list_account_users(request, filters: UserFilterSchema = Query(...)):
 
 @public_api.get("/users/filter_values", response=List[Any])
 @paginate
+@require_permission("LIST_ACCOUNT_USERS")
 def users_filter_values(request, field: str):
     """Retrieve the distinct values for a specific User field."""
     return get_model_queryset_filter_values(
@@ -1034,7 +1047,7 @@ def get_user(request, user_id: int):
 
 
 @public_api.put("/users", response={HTTPStatus.CREATED: UserSchema})
-@require_active_admin
+@require_permission("ADD_ACCOUNT_USER")
 @transaction.atomic
 def create_user(request, payload: CreateUserSchema, send_welcome: bool):
     """Create a new User."""
@@ -1148,10 +1161,14 @@ def update_user(request, payload: UpdateUserSchema, user_id: int):
         if k == "teams":
             team_ids = {x["id"] for x in v}
             if team_ids != set(target_user.teams.values_list("id", flat=True)):
-                if req_user.can_admin_account(target_user.account_id):
+                if req_user.has_perm(
+                    Permissions.ADMIN_ACCOUNT, target_user.account
+                ):
                     target_user.teams.set(Team.objects.filter(id__in=team_ids))
                 else:
-                    raise PermissionDenied("only account admins can update user teams")
+                    raise PermissionDenied(
+                        "only account admins can update user teams"
+                    )
         else:
             setattr(target_user, k, v)
             updated = True
@@ -1163,17 +1180,23 @@ def update_user(request, payload: UpdateUserSchema, user_id: int):
 
 @public_api.get("/teams", response=List[TeamSchema])
 @paginate
-def list_account_teams(request, filters: TeamFilterSchema = Query(...)):
-    """Return the teams that are members of the requesting ADMIN-type user's
-    account."""
+def list_teams(request, filters: TeamFilterSchema = Query(...)):
+    """Return all account teams if user has permission to do so, otherwise
+    return only the teams of which the user is a member."""
+    user = request.user
+    filter_kwargs = {
+        "account_id": user.account_id,
+    }
+    if not user.has_perm(Permissions.LIST_ACCOUNT_TEAMS):
+        filter_kwargs["members"] = user
     queryset = filters.filter(
-        Team.objects.filter(account=request.user.account).prefetch_related("members")
+        Team.objects.filter(**filter_kwargs).prefetch_related("members")
     )
     return apply_sort_param(request.GET.get("sort"), queryset, TeamSchema)
 
 
 @public_api.put("/teams", response={HTTPStatus.CREATED: TeamSchema})
-@require_active_admin
+@require_permission("ADD_ACCOUNT_TEAM")
 def create_team(request, payload: CreateTeamSchema):
     """Create a new Team."""
     # Instantiate a Team for permissions testing.
@@ -1187,6 +1210,7 @@ def create_team(request, payload: CreateTeamSchema):
 
 
 @public_api.patch("/teams/{team_id}", response=TeamSchema)
+@require_permission("CHANGE_ACCOUNT_TEAM")
 def update_team(request, payload: UpdateTeamSchema, team_id: int):
     """Update an existing Team."""
     req_user = request.user
@@ -1215,11 +1239,10 @@ def update_team(request, payload: UpdateTeamSchema, team_id: int):
 
 
 @public_api.post("/collections/custom", response=JobStateInfo)
+@require_permission("CREATE_CUSTOM_COLLECTION")
 def generate_sub_collection(request, payload: SubCollectionCreationRequest):
     """Generate a sub collection"""
     user = request.user
-    if not user.has_perm(Permissions.CREATE_CUSTOM_COLLECTION):
-        raise PermissionDenied
     # Pop data.sources, which will either be a string (for a single selection)
     # or an string[] (for multiple selections).
     job_params = {k: v for k, v in dict(payload).items() if v is not None}
@@ -1240,11 +1263,10 @@ def generate_sub_collection(request, payload: SubCollectionCreationRequest):
 
 
 @public_api.post("/datasets/generate", response=JobStateInfo)
+@require_permission("GENERATE_DATASET")
 def generate_dataset(request, payload: DatasetGenerationRequest):
     """Generate a dataset"""
     user = request.user
-    if not user.has_perm(Permissions.GENERATE_DATASET):
-        raise PermissionDenied
     collection = get_object_or_404(
         Collection.user_queryset(user), id=payload.collection_id
     )

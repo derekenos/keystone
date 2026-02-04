@@ -285,7 +285,7 @@
               <i class="fa fa-cloud-download fa-5x"></i>
               <p class="card-text center">Download</p>
             </a>
-            {% if not omit_colab and file.filename in settings.SUPPORTED_COLAB_JOBFILE_FILENAMES %}
+            {% if file.filename in settings.SUPPORTED_COLAB_JOBFILE_FILENAMES %}
             <div class="colab-wrapper">
               {% if file.size_bytes < settings.COLAB_MAX_FILE_SIZE_BYTES %}
               <a href="{{ url('dataset-file-colab', args=[dataset.id, file.filename]) }}" target="_blank" class="colab">

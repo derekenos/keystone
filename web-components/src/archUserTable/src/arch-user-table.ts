@@ -20,11 +20,10 @@ import Styles from "./styles.js";
 export class ArchUserTable extends ArchDataTable<User> {
   @property({ type: Number }) accountId!: number;
   @property({ type: Number }) userId!: number;
-  @property({ type: Boolean }) userIsStaff!: boolean;
-  @property({ type: String }) userRole!: UserRoles;
   @property({ type: Boolean }) accountMaxUsersReached = false;
   @property({ type: Boolean, attribute: "inactive-users-become-viewers" })
   inactiveUsersBecomeViewers = false;
+  @property({ type: Boolean }) readonly = false;
 
   @state() createNewUserModalTrigger!: HTMLElement;
   @state() editUserModal!: ArchEditUserModal;
@@ -34,11 +33,10 @@ export class ArchUserTable extends ArchDataTable<User> {
 
   willUpdate(_changedProperties: PropertyValues) {
     super.willUpdate(_changedProperties);
+    const { readonly } = this;
     this.actionButtonDisabled = [false, false];
-    // Add selection action buttons if user is staff or admin.
-    const isStaffOrAdmin =
-      this.userIsStaff || this.userRole === UserRoles.ADMIN;
-    if (isStaffOrAdmin) {
+    // Add selection action buttons if not in readonly mode.
+    if (!readonly) {
       this.actionButtonLabels = ["Edit User"];
       this.actionButtonSignals = [Topics.DISPLAY_EDIT_USER_MODAL];
     }
@@ -113,13 +111,13 @@ export class ArchUserTable extends ArchDataTable<User> {
     this.rowClickEnabled = true;
     this.searchColumns = ["username", "first_name", "last_name", "email"];
     this.searchColumnLabels = this.searchColumns.map(toTitleCase);
-    this.selectable = isStaffOrAdmin;
+    this.selectable = !readonly;
     this.singleName = "Account User";
     this.sort = "username,role";
     this.sortableColumns = [true, true, true, true, true, true, true];
 
-    // Display "Create User" button to staff / admin users.
-    if (isStaffOrAdmin) {
+    // Display "Create User" button if not in readonly mode.
+    if (!readonly) {
       this.nonSelectionActions = [Topics.DISPLAY_CREATE_USER_MODAL];
       this.nonSelectionActionLabels = ["Create New User"];
     }

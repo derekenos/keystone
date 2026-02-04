@@ -13,7 +13,10 @@ from pytest import (
     raises,
 )
 
-from config.settings import KnownArchJobUuids
+from config.settings import (
+    ALLOW_INACTIVE_USER_AS_VIEWER,
+    KnownArchJobUuids,
+)
 
 from keystone.api import CreateUserSchema
 from keystone.models import (
@@ -133,7 +136,7 @@ class Client(_Client):
 
 @mark.django_db
 @mark.parametrize(
-    "role,account_active,allowed",
+    "role,is_active,allowed",
     (
         (UserRoles.ADMIN, True, True),
         (UserRoles.ADMIN, False, False),
@@ -141,13 +144,15 @@ class Client(_Client):
         (UserRoles.VIEWER, True, False),
     ),
 )
-def test_admin_can_list_active_account_users(
-    role, account_active, allowed, make_account, make_user
+# Active status of account has no effect.
+@mark.parametrize("account_active", (True, False))
+def test_active_admin_can_list_account_users(
+    account_active, role, is_active, allowed, make_account, make_user
 ):
     """Only Admins of active accounts can list their account users."""
     # Make some same-account users.
     account = make_account(is_active=account_active)
-    user = make_user(account=account, role=role)
+    user = make_user(account=account, role=role, is_active=is_active)
     normal_user = make_user(account=account)
 
     # Make a user in a different account, which we'll expect to be absent
@@ -162,9 +167,11 @@ def test_admin_can_list_active_account_users(
         assert res.status_code == HTTPStatus.OK
         data = res.json()
         assert {user["id"] for user in data["items"]} == {user.id, normal_user.id}
-    else:
+    elif is_active or ALLOW_INACTIVE_USER_AS_VIEWER:
         assert res.status_code == HTTPStatus.FORBIDDEN
         assert res.json() == {"detail": "FORBIDDEN"}
+    else:
+        assert res.status_code == HTTPStatus.UNAUTHORIZED
 
 
 @mark.django_db
@@ -454,20 +461,29 @@ def test_no_user_can_update_other_account_user(role, make_account, make_user):
 
 
 @mark.django_db
-def test_any_user_can_list_account_teams(make_user, make_team):
-    """Any user can list their account's teams"""
-    # Create a user on a team.
-    user = make_user()
-    team1 = make_team(account=user.account)
-    user.teams.add(team1)
-    # Create a second account team of which the user is not a member.
-    team2 = make_team(account=user.account)
-    # Create a different-account team.
+def test_users_can_list_account_teams(make_user, make_team):
+    """An active admin user can list all of their account's teams, while a
+    non-admin user can only list the teams of which they are a member."""
+    # Create same-account admin and non-admin users.
+    admin_user = make_user(role=UserRoles.ADMIN)
+    account = admin_user.account
+    normal_user = make_user(account=account)
+    # Create team1 with the admin user as a member, and team2 with the normal
+    # user as a member.
+    team1 = make_team(account=account, members=(admin_user,))
+    team2 = make_team(account=account, members=(normal_user,))
+
+    # Create a second account team of which neither user is a member.
     other_account_team = make_team()
-    # Check that the user can list its account teams.
-    res = Client(user).list_teams()
-    assert res.status_code == HTTPStatus.OK
-    assert {x["id"] for x in res.json()["items"]} == {team1.id, team2.id}
+
+    def _assert_team_ids(user, team_ids):
+        assert {x["id"] for x in Client(user).list_teams().json()["items"]} == team_ids
+
+    # Check that the admin user can list all account teams.
+    _assert_team_ids(admin_user, {team1.id, team2.id})
+
+    # Check that the normal user can only list their own teams.
+    _assert_team_ids(normal_user, {team2.id})
 
 
 @mark.django_db
@@ -638,8 +654,17 @@ def test_dataset_no_implicit_global_access(
 
 
 @mark.django_db
-@mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER, UserRoles.VIEWER))
-def test_dataset_owner_can_update_teams(role, make_team, make_user, make_user_dataset):
+@mark.parametrize(
+    "role,forbidden",
+    (
+        (UserRoles.ADMIN, False),
+        (UserRoles.USER, False),
+        (UserRoles.VIEWER, True),
+    ),
+)
+def test_nonviewer_dataset_owner_can_update_teams(
+    role, forbidden, make_team, make_user, make_user_dataset
+):
     """A dataset owner (including viewers) can update the teams with which the
     dataset is shared."""
     user = make_user(role=role)
@@ -649,15 +674,25 @@ def test_dataset_owner_can_update_teams(role, make_team, make_user, make_user_da
     user.teams.set((team1, team2))
     dataset = make_user_dataset(user)
     res = Client(user).update_dataset_teams(dataset.id, [team1, team2])
-    assert res.status_code == HTTPStatus.NO_CONTENT
-    dataset_teams = set(dataset.teams.values_list("id", flat=True))
-    assert dataset_teams == {team1.id, team2.id}
+    if forbidden:
+        assert res.status_code == HTTPStatus.FORBIDDEN
+    else:
+        assert res.status_code == HTTPStatus.NO_CONTENT
+        dataset_teams = set(dataset.teams.values_list("id", flat=True))
+        assert dataset_teams == {team1.id, team2.id}
 
 
 @mark.django_db
-@mark.parametrize("role", (UserRoles.ADMIN, UserRoles.USER, UserRoles.VIEWER))
-def test_dataset_owner_cant_update_teams_with_nonmember_team(
-    role, make_team, make_user, make_user_dataset
+@mark.parametrize(
+    "role,forbidden",
+    (
+        (UserRoles.ADMIN, False),
+        (UserRoles.USER, False),
+        (UserRoles.VIEWER, True),
+    ),
+)
+def test_nonviewer_dataset_owner_cant_update_teams_with_nonmember_team(
+    role, forbidden, make_team, make_user, make_user_dataset
 ):
     """A dataset owner is not allowed to share a dataset with a team of which they're
     not a member."""
@@ -665,8 +700,11 @@ def test_dataset_owner_cant_update_teams_with_nonmember_team(
     team = make_team(account=user.account)
     dataset = make_user_dataset(user)
     res = Client(user).update_dataset_teams(dataset.id, [team])
-    assert res.status_code == HTTPStatus.BAD_REQUEST
-    assert res.json()["detail"] == f"Invalid team ID(s): [{team.id}]"
+    if forbidden:
+        assert res.status_code == HTTPStatus.FORBIDDEN
+    else:
+        assert res.status_code == HTTPStatus.BAD_REQUEST
+        assert res.json()["detail"] == f"Invalid team ID(s): [{team.id}]"
 
 
 @mark.django_db
