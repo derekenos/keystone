@@ -111,7 +111,7 @@ export class ArchEditUserModal extends ArchModal {
                 )}
               </select>
               <span
-                id="user-deactivated-wrapper"
+                id="user-active-wrapper"
                 title=${!userIsSelf
                   ? ""
                   : "Your activation status can only be changed by another Admin"}
@@ -119,17 +119,17 @@ export class ArchEditUserModal extends ArchModal {
               >
                 <input
                   type="checkbox"
-                  id="user-deactivated"
-                  name="user-deactivated"
-                  ?checked=${!user.is_active}
+                  id="user-active"
+                  name="user-active"
+                  ?checked=${user.is_active}
                   ?disabled=${userIsSelf}
                 />
-                <label for="user-deactivated">Deactivated</label>
+                <label for="user-active">Active</label>
                 ${!inactiveUsersBecomeViewers
                   ? ""
                   : html` <span
                       class="info-icon"
-                      title="Deactivated users can still log in but their access is restricted to that of a VIEWER"
+                      title="Inactive users can still log in but their access is restricted to that of a VIEWER"
                       >&#9432;</span
                     >`}
               </span>
@@ -182,7 +182,7 @@ export class ArchEditUserModal extends ArchModal {
       first_name: formData.get("first-name") as string,
       last_name: formData.get("last-name") as string,
       role: formData.get("user-role") as User["role"],
-      is_active: formData.get("user-deactivated") !== "on",
+      is_active: formData.get("user-active") === "on",
       teams: teamsSelector.selectedOptions,
     };
     this.updateUser(userId, data);

@@ -24,7 +24,7 @@ export default [
       width: 5em;
     }
 
-    data-table > table > thead > tr > th.deactivated {
+    data-table > table > thead > tr > th.status {
       width: 8em;
     }
 

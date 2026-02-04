@@ -38,30 +38,31 @@ export default [
       cursor: not-allowed;
     }
 
-    form > span#user-deactivated-wrapper {
+    form > span#user-active-wrapper {
       display: inline-block;
     }
 
-    form > span#user-deactivated-wrapper > span.info-icon {
+    form > span#user-active-wrapper > span.info-icon {
       margin-left: 0.3rem;
       cursor: help;
     }
 
-    form > span#user-deactivated-wrapper > input {
+    form > span#user-active-wrapper > input {
       width: unset;
       margin-top: 1rem;
     }
 
-    form > span#user-deactivated-wrapper > label {
+    form > span#user-active-wrapper > label {
       display: inline-block;
       margin-top: 1rem;
+      cursor: pointer;
     }
 
-    form > span#user-deactivated-wrapper.disabled {
+    form > span#user-active-wrapper.disabled {
       cursor: not-allowed;
     }
 
-    form > span#user-deactivated-wrapper.disabled > * {
+    form > span#user-active-wrapper.disabled > * {
       cursor: unset;
     }
 

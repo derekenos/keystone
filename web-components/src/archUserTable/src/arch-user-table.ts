@@ -64,17 +64,17 @@ export class ArchUserTable extends ArchDataTable<User> {
         ],
       (is_active) =>
         is_active
-          ? "No"
+          ? "Active"
           : createElement("span", {
               children: [
-                "Yes",
+                "Inactive",
                 !this.inactiveUsersBecomeViewers
                   ? ""
                   : createElement("span", {
                       className: "info-icon",
                       innerHTML: "&#9432",
                       title:
-                        "Deactivated users can still log in but their access is restricted to that of a VIEWER",
+                        "Inactive users can still log in but their access is restricted to that of a VIEWER",
                     }),
               ],
             }),
@@ -95,7 +95,7 @@ export class ArchUserTable extends ArchDataTable<User> {
       undefined,
       undefined,
       undefined,
-      { true: "No", false: "Yes" },
+      { true: "Active", false: "Inactive" },
     ];
     this.columnHeaders = [
       "Username",
@@ -104,7 +104,7 @@ export class ArchUserTable extends ArchDataTable<User> {
       "Date Created",
       "Last Login",
       "Role",
-      "Deactivated",
+      "Status",
     ];
     this.filterableColumns = [false, false, false, false, false, true, true];
     this.pageLength = 50;
