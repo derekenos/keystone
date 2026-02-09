@@ -431,6 +431,8 @@ def dataset_detail(request, dataset_id):
             "disable_publishing": not user.has_perm(
                 Permissions.PUBLISH_DATASET, dataset
             ),
+            "output_is_cdx": dataset.job_start.job_type_id
+            == settings.KnownArchJobUuids.CDX_DATASET,
         },
     )
 

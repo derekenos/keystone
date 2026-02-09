@@ -49,6 +49,57 @@
 {% endif %}
 
 <script type="module">
+  // https://iipc.github.io/warc-specifications/specifications/cdx-format/cdx-2006/#field-specifications
+  const Cdx2015FieldLetterDescriptionMap = {
+    "A": "canonized url",
+    "B": "news group",
+    "C": "rulespace category",
+    "D": "compressed dat file offset",
+    "F": "canonized frame",
+    "G": "multi-column language description ( soon)",
+    "H": "canonized host",
+    "I": "canonized image",
+    "J": "canonized jump point",
+    "K": "unknown", // "Some weird FBIS what's changed kinda thing",
+    "L": "canonized link",
+    "M": "meta tags (AIF)",
+    "N": "massaged url",
+    "P": "canonized path",
+    "Q": "language string",
+    "R": "canonized redirect",
+    "S": "compressed record size",
+    "U": "uniqueness",
+    "V": "compressed arc file offset",
+    "X": "canonized url in other href tags",
+    "Y": "canonized url in other src tags",
+    "Z": "canonized url found in script",
+    "a": "original url",
+    "b": "date",
+    "c": "old style checksum",
+    "d": "uncompressed dat file offset",
+    "e": "IP",
+    "f": "frame",
+    "g": "file name",
+    "h": "original host",
+    "i": "image",
+    "j": "original jump point",
+    "k": "new style checksum",
+    "l": "link",
+    "m": "mime type of original document",
+    "n": "arc document length",
+    "o": "port",
+    "p": "original path",
+    "r": "redirect",
+    "s": "response code",
+    "t": "title",
+    "v": "uncompressed arc file offset",
+    "x": "url in other href tages",
+    "y": "url in other src tags",
+    "z": "url found in script",
+  }
+
+  const DefaultCdxFieldSetKeys = ["N", "b", "a", "m", "s", "k", "r", "M", "S"];
+
   function init() {
     // Initialize previews.
     Array.from(document.querySelectorAll("div[data-preview-url]"))
@@ -75,30 +126,48 @@
         hljs.highlightAll();
 {% else %}
         // Render CSV preview.
-        d3.text(previewUrl, data => {
-          const previewCSV = d3.csv.parseRows(data);
+        d3.text(previewUrl, rows => {
+          const previewCSV = d3.dsv(
+            "{{ ' ' if output_is_cdx else ',' }}",
+            "text/csv"
+          ).parseRows(rows);
           // Remove the loading indicator.
           loadingEl.remove();
           const previewTbl = d3.select(el)
                 .append("table")
-                .attr("class", "large-12 columns margin-top one csv-preview");
+                {% if output_is_cdx %}
+                .attr("id", "cdx-preview")
+                {% endif %}
+                .attr("class", "large-12 columns margin-top one");
+          {% if output_is_cdx %}
+          // Decode included CDX header or assume default field set.
+          const cdxHeaderPresent = previewCSV[0].length && previewCSV[0][0] === "CDX";
+          const header = cdxHeaderPresent ? previewCSV[0].slice(1) : DefaultCdxFieldSetKeys;
+          const data = cdxHeaderPresent ? previewCSV.slice(1) : previewCSV;
+          {% else %}
+          const header = previewCSV[0];
+          const data = previewCSV.slice(1);
+          {% endif %}
           previewTbl.append("thead")
             .append("tr")
             .selectAll("th")
-            .data(previewCSV[0])
+            .data(header)
             .enter().append("th")
             .text(function(d) {
-              return d;
-            });
+              return Cdx2015FieldLetterDescriptionMap[d] || "unknown";
+            })
+            .attr("class", function(k) { return `cdx-${k}` })
           previewTbl.append("tbody")
             .selectAll("tr")
-            .data(previewCSV.slice(1))
+            .data(data)
             .enter().append("tr")
 
             .selectAll("td")
             .data(function(d) { return d; }).enter()
             .append("td")
-            .text(function(d) { return d; });
+            .text(function(d) { return d; })
+            // Set title to enable hover visibility of truncated values.
+            .attr("title", function(value) { return value; });
         });
 {% endif %}
       });

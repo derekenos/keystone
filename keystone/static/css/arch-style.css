@@ -215,6 +215,30 @@ div.graph-description {
     overflow: auto;
 }
 
+/* massaged url */
+table#cdx-preview th.cdx-N,
+/* original url */
+table#cdx-preview th.cdx-a,
+/* redirect */
+table#cdx-preview th.cdx-r {
+  max-width: 20rem;
+}
+
+/* date */
+table#cdx-preview th.cdx-b {
+  max-width: 10rem;
+}
+
+/* mime type of original document */
+table#cdx-preview th.cdx-m {
+  max-width: 12rem;
+}
+
+/* response code */
+table#cdx-preview th.cdx-s {
+  max-width: 6rem;
+}
+
 .card-container {
   display: flex;
   justify-content: space-between;
