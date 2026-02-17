@@ -153,10 +153,11 @@
             .selectAll("th")
             .data(header)
             .enter().append("th")
-            .text(function(d) {
-              return Cdx2015FieldLetterDescriptionMap[d] || "unknown";
-            })
-            .attr("class", function(k) { return `cdx-${k}` })
+            {% if output_is_cdx %}
+            .text(function(k) { return Cdx2015FieldLetterDescriptionMap[k] || "unknown"; })
+            {% else %}
+            .text(function(d) { return d; });
+            {% endif %}
           previewTbl.append("tbody")
             .selectAll("tr")
             .data(data)
@@ -167,7 +168,11 @@
             .append("td")
             .text(function(d) { return d; })
             // Set title to enable hover visibility of truncated values.
-            .attr("title", function(value) { return value; });
+            .attr("title", function(value) { return value; })
+            {% if output_is_cdx %}
+            .attr("class", function(_, colIdx) { return `cdx-${header[colIdx]}` })
+            {% endif %}
+            ;
         });
 {% endif %}
       });
