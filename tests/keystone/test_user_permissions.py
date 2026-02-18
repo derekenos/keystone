@@ -74,6 +74,9 @@ CATEGORY_FIELD_TEST_METHODS_MAP = {
 }
 
 
+NUM_EXPECTED_TEST_CASES = 600
+
+
 ###############################################################################
 # Helpers
 ###############################################################################
@@ -194,6 +197,14 @@ def parse_test_cases_from_permissions_md():
                                 perm_condition,
                             ]
                         )
+    # Assert that parsing yieled the expected number of test cases.
+    num_test_cases = len(test_cases)
+    if num_test_cases != NUM_EXPECTED_TEST_CASES:
+        raise AssertionError(
+            f"Parsing user-permissions-matrix.md yielded {num_test_cases} "
+            f"tests cases, but we expected {NUM_EXPECTED_TEST_CASES}. "
+            "Maybe you need to update NUM_EXPECTED_TEST_CASES?"
+        )
     return test_cases
 
 

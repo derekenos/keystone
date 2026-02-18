@@ -1,6 +1,9 @@
 
 # User Permissions Matrix
 
+These tables document our user permissions **and** are programmatically parsed by `parse_test_cases_from_permissions_md()` in `test_user_permissions.py` in order to generate test cases that verify that these permissions actually work as designed. Consequently, **changes to this document may require a corresponding update to the parsing logic, or the `NUM_EXPECTED_TEST_CASES` value, in `test_user_permissions.py`**.
+
+
 ## When ALLOW_INACTIVE_USER_AS_VIEWER = True
 
 When `config.settings.ALLOW_INACTIVE_USER_AS_VIEWER = True`, a user having `is_active = False` will be
