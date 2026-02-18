@@ -28,16 +28,16 @@ BOOL_WITH_CONDITIONAL_REGEX = re.compile(
     r"^(?P<has_perm>Yes|No)(?:\s*\((?P<perm_condition>[^\)]+)\))?$"
 )
 
-OBJECT_CATEGORIES = frozenset(("Collections", "Datasets", "Accounts"))
+CATEGORIES = frozenset(("Collections", "Datasets", "Accounts"))
 
 
-OBJECT_FIELD_TEST_METHODS_MAP = {
+CATEGORY_FIELD_TEST_METHODS_MAP = {
     "Collections": {
         "View": (
             "_test_collections_view",
             "_test_collections_api_endpoint",
             "_test_collection_detail_view",
-            "_test_collection_api_endpoint",
+            "_test_collection_detail_api_endpoint",
         ),
         "Edit User Settings": ("_test_edit_collection_user_settings",),
         "Create Custom": ("_test_create_custom_collection",),
@@ -64,8 +64,10 @@ OBJECT_FIELD_TEST_METHODS_MAP = {
         ),
         "Add User": ("_test_add_account_user",),
         "Edit User": ("_test_edit_account_user",),
-        "View Teams": ("_test_account_teams_view",),
-        "View Teams": ("_test_account_teams_api_endpoint",),
+        "View Teams": (
+            "_test_account_teams_view",
+            "_test_account_teams_api_endpoint",
+        ),
         "Add Team": ("_test_add_account_team",),
         "Edit Team": ("_test_edit_account_team",),
     },
@@ -120,7 +122,7 @@ def parse_next_allow_inactive_user_as_viewer_setting(fh):
 def parse_next_object_category(fh):
     """Find and return the name of the next permissions object category."""
     s = parse_next_heading(fh, 3)
-    assert s in OBJECT_CATEGORIES
+    assert s in CATEGORIES
     return s
 
 
@@ -170,7 +172,7 @@ def parse_test_cases_from_permissions_md():
         allow_inactive_user_as_viewer_setting = (
             parse_next_allow_inactive_user_as_viewer_setting(fh)
         )
-        for _ in OBJECT_CATEGORIES:
+        for _ in CATEGORIES:
             category = parse_next_object_category(fh)
             for row in parse_next_table(fh):
                 user_role = row.pop("User Role").upper()
@@ -180,7 +182,7 @@ def parse_test_cases_from_permissions_md():
                     gd = BOOL_WITH_CONDITIONAL_REGEX.match(v).groupdict()
                     has_perm = gd["has_perm"] == "Yes"
                     perm_condition = gd["perm_condition"]
-                    for test_method in OBJECT_FIELD_TEST_METHODS_MAP[category][k]:
+                    for test_method in CATEGORY_FIELD_TEST_METHODS_MAP[category][k]:
                         test_cases.append(
                             [
                                 allow_inactive_user_as_viewer_setting,
@@ -265,7 +267,7 @@ class TestUserPermissions:
         )
 
     @classmethod
-    def _test_collection_api_endpoint(
+    def _test_collection_detail_api_endpoint(
         cls, allow_inactive_user_as_viewer, client, has_perm, perm_condition, fixtures_d
     ):
         """Test /api/collections/{collection_id} API endpoint access."""
