@@ -139,10 +139,11 @@ export type User = {
     role: UserRoles;
     date_joined: Date;
     last_login: Date;
+    is_active: boolean;
     teams: Array<MinimalTeam>;
 };
 export type MinimalUser = Pick<User, "id" | "username">;
-export type UserUpdate = Pick<User, "first_name" | "last_name" | "email" | "role" | "teams">;
+export type UserUpdate = Pick<User, "first_name" | "last_name" | "email" | "role" | "is_active" | "teams">;
 export type Team = {
     account_id: number;
     id: number;

@@ -1,4 +1,4 @@
-import{i as e,_ as t,e as s,y as r,a}from"./chunk-query-assigned-elements.js";import{t as o}from"./chunk-state.js";import{i}from"./chunk-focusable.js";import{A as l}from"./chunk-ArchAPI.js";import{a as n,U as d}from"./chunk-helpers.js";import{A as m}from"./chunk-arch-select-adder.js";import{g as c,B as h}from"./chunk-styles.js";import{A as u}from"./chunk-arch-modal.js";import"./chunk-constants.js";import"./chunk-scale-large.js";import"./chunk-sizedMixin.js";var p=[c,e`
+import{i as e,_ as t,e as s,y as r,a}from"./chunk-query-assigned-elements.js";import{t as i}from"./chunk-state.js";import{i as o}from"./chunk-focusable.js";import{A as n}from"./chunk-ArchAPI.js";import{a as l,U as d}from"./chunk-helpers.js";import{A as c}from"./chunk-arch-select-adder.js";import{g as m,B as p}from"./chunk-styles.js";import{A as u}from"./chunk-arch-modal.js";import"./chunk-constants.js";import"./chunk-scale-large.js";import"./chunk-sizedMixin.js";var h=[m,e`
     h3 {
       margin-block-start: 0;
       margin-block-end: 0.5rem;
@@ -27,12 +27,12 @@ import{i as e,_ as t,e as s,y as r,a}from"./chunk-query-assigned-elements.js";im
       padding: 0.2rem;
       border-radius: 8px;
     }
-  `];let f=class extends m{connectedCallback(){const{readOnly:e}=this;this.reset(),this.deselectButtonText="remove",this.emptyOptionsPlaceholder=r`
+  `];let f=class extends c{connectedCallback(){const{readOnly:e}=this;this.reset(),this.deselectButtonText="remove",this.emptyOptionsPlaceholder=r`
       <em
         >Your account doesn’t have any teams yet.
-        <a href="${n.teams}">Manage your teams here.</a></em
+        <a href="${l.teams}">Manage your teams here.</a></em
       >
-    `,this.headingLevel=0,this.readOnlyMessage=e?r`<em>Contact an account admin to modify your teams.</em>`:void 0,this.selectCtaText="Add a team",this.valueGetter=e=>String(e.id),this.labelGetter=e=>e.name,super.connectedCallback()}willUpdate(e){e.has("userTeams")&&this.reset()}reset(){const{accountTeams:e,userTeams:t}=this;this.options=e.slice(),this.selectedOptions=t.slice()}};f.styles=p,t([s({type:Array})],f.prototype,"accountTeams",void 0),t([s({type:Array})],f.prototype,"userTeams",void 0),t([s({type:Boolean})],f.prototype,"readOnly",void 0),f=t([a("arch-user-teams-selector")],f);var y=[...u.styles,h,e`
+    `,this.headingLevel=0,this.readOnlyMessage=e?r`<em>Contact an account admin to modify your teams.</em>`:void 0,this.selectCtaText="Add a team",this.valueGetter=e=>String(e.id),this.labelGetter=e=>e.name,super.connectedCallback()}willUpdate(e){e.has("userTeams")&&this.reset()}reset(){const{accountTeams:e,userTeams:t}=this;this.options=e.slice(),this.selectedOptions=t.slice()}};f.styles=h,t([s({type:Array})],f.prototype,"accountTeams",void 0),t([s({type:Array})],f.prototype,"userTeams",void 0),t([s({type:Boolean})],f.prototype,"readOnly",void 0),f=t([a("arch-user-teams-selector")],f);var v=[...u.styles,p,e`
     form > label {
       font-weight: normal;
       margin-top: 0.5rem;
@@ -64,6 +64,34 @@ import{i as e,_ as t,e as s,y as r,a}from"./chunk-query-assigned-elements.js";im
       cursor: not-allowed;
     }
 
+    form > span#user-active-wrapper {
+      display: inline-block;
+    }
+
+    form > span#user-active-wrapper > span.info-icon {
+      margin-left: 0.3rem;
+      cursor: help;
+    }
+
+    form > span#user-active-wrapper > input {
+      width: unset;
+      margin-top: 1rem;
+    }
+
+    form > span#user-active-wrapper > label {
+      display: inline-block;
+      margin-top: 1rem;
+      cursor: pointer;
+    }
+
+    form > span#user-active-wrapper.disabled {
+      cursor: not-allowed;
+    }
+
+    form > span#user-active-wrapper.disabled > * {
+      cursor: unset;
+    }
+
     form > label[for="send-email"] {
       margin-left: 0.5em;
     }
@@ -77,7 +105,7 @@ import{i as e,_ as t,e as s,y as r,a}from"./chunk-query-assigned-elements.js";im
     div.error.show {
       display: block;
     }
-  `];let v=class extends u{constructor(){super(),this.profileMode=!1,this.onUpdate=e=>null,this.accountTeams=[],l.teams.list().then((e=>this.accountTeams=e.items))}set unhandledError(e){const{errorEl:t}=this;e?t.classList.add("show"):t.classList.remove("show")}set user(e){const{accountTeams:t,profileMode:s,userId:a}=this;if(void 0===e)return void(this.content=r``);const o=e.id===a,i=e.role===d.ADMIN;this.content=r`
+  `];let y=class extends u{constructor(){super(),this.profileMode=!1,this.onUpdate=e=>null,this.inactiveUsersBecomeViewers=!1,this.accountTeams=[],n.teams.list().then((e=>this.accountTeams=e.items))}set unhandledError(e){const{errorEl:t}=this;e?t.classList.add("show"):t.classList.remove("show")}set user(e){const{accountTeams:t,inactiveUsersBecomeViewers:s,profileMode:a,userId:i}=this;if(void 0===e)return void(this.content=r``);const o=e.id===i,n=e.role===d.ADMIN;this.content=r`
       <form validate>
         <input type="hidden" name="id" value=${e.id} />
 
@@ -106,7 +134,7 @@ import{i as e,_ as t,e as s,y as r,a}from"./chunk-query-assigned-elements.js";im
           value=${e.email}
         />
 
-        ${s?r``:r`
+        ${a?r``:r`
               <label for="user-role">Role</label>
               <select
                 id="user-role"
@@ -121,13 +149,32 @@ import{i as e,_ as t,e as s,y as r,a}from"./chunk-query-assigned-elements.js";im
                     </option>
                   `))}
               </select>
+              <span
+                id="user-active-wrapper"
+                title=${o?"Your activation status can only be changed by another Admin":""}
+                class=${o?"disabled":""}
+              >
+                <input
+                  type="checkbox"
+                  id="user-active"
+                  name="user-active"
+                  ?checked=${e.is_active}
+                  ?disabled=${o}
+                />
+                <label for="user-active">Active</label>
+                ${s?r` <span
+                      class="info-icon"
+                      title="Inactive users can still log in but their access is restricted to that of a VIEWER"
+                      >&#9432;</span
+                    >`:""}
+              </span>
             `}
-        ${0===t.length&&s&&!i?r``:r`
+        ${0===t.length&&a&&!n?r``:r`
               <label for="user-teams-selector">Teams</label>
               <arch-user-teams-selector
                 .accountTeams=${t}
                 .userTeams=${e.teams}
-                .readOnly=${!!s&&e.role!==d.ADMIN}
+                .readOnly=${!!a&&e.role!==d.ADMIN}
                 id="user-teams-selector"
               >
               </arch-user-teams-selector>
@@ -136,5 +183,5 @@ import{i as e,_ as t,e as s,y as r,a}from"./chunk-query-assigned-elements.js";im
       <div class="error alert-danger">
         Something went wrong. Please try again.
       </div>
-    `}connectedCallback(){super.connectedCallback();const{profileMode:e}=this;this.scrollable=!0,this.modalSize="m",this.submitButtonText="Save",this.title=e?"Edit Profile":"Edit User",this.addEventListener("sp-opened",this.onOpenHandler.bind(this)),this.addEventListener("sp-closed",this.onCloseHandler.bind(this))}submit(){const{form:e,teamsSelector:t}=this;if(!e.checkValidity())return void e.reportValidity();const s=new FormData(this.form),r=parseInt(s.get("id")),a={email:s.get("user-email"),first_name:s.get("first-name"),last_name:s.get("last-name"),role:s.get("user-role"),teams:t.selectedOptions};this.updateUser(r,a)}clearErrors(){this.unhandledError=!1,this.form&&this.emailInput.setCustomValidity("")}clearInputValidityOnChange(e){const t=()=>{e.setCustomValidity(""),e.removeEventListener("input",t)};e.addEventListener("input",t)}updateUser(e,t){this.clearErrors(),l.users.update(e,t).then((e=>{this.open=!1;try{this.onUpdate(e)}catch(e){console.error(e)}})).catch((e=>{var t;400!==(null===(t=e.response)||void 0===t?void 0:t.status)?this.unhandledError=!0:e.response.json().then((e=>{const{details:t}=e;t.endsWith("already exists for field (email)")?(this.emailInput.setCustomValidity("A user with this Email already exists."),this.emailInput.reportValidity(),this.clearInputValidityOnChange(this.emailInput)):this.unhandledError=!0})).catch((()=>this.unhandledError=!0))}))}onOpenHandler(){const{profileMode:e,userId:t}=this;e&&l.users.get(t).then((e=>this.user=e))}onCloseHandler(){var e;const{profileMode:t}=this;null===(e=this.form)||void 0===e||e.reset(),this.teamsSelector.reset(),this.clearErrors(),t&&(this.user=void 0)}};v.styles=y,t([s({type:Number})],v.prototype,"userId",void 0),t([s({type:Boolean})],v.prototype,"profileMode",void 0),t([s()],v.prototype,"onUpdate",void 0),t([i("form")],v.prototype,"form",void 0),t([i("form > input#user-email")],v.prototype,"emailInput",void 0),t([i("div.error")],v.prototype,"errorEl",void 0),t([i("arch-user-teams-selector")],v.prototype,"teamsSelector",void 0),t([o()],v.prototype,"accountTeams",void 0),v=t([a("arch-edit-user-modal")],v);export{v as ArchEditUserModal};
+    `}connectedCallback(){super.connectedCallback();const{profileMode:e}=this;this.scrollable=!0,this.modalSize="m",this.submitButtonText="Save",this.title=e?"Edit Profile":"Edit User",this.addEventListener("sp-opened",this.onOpenHandler.bind(this)),this.addEventListener("sp-closed",this.onCloseHandler.bind(this))}submit(){const{form:e,teamsSelector:t}=this;if(!e.checkValidity())return void e.reportValidity();const s=new FormData(this.form),r=parseInt(s.get("id")),a={email:s.get("user-email"),first_name:s.get("first-name"),last_name:s.get("last-name"),role:s.get("user-role"),is_active:"on"===s.get("user-active"),teams:t.selectedOptions};this.updateUser(r,a)}clearErrors(){this.unhandledError=!1,this.form&&this.emailInput.setCustomValidity("")}clearInputValidityOnChange(e){const t=()=>{e.setCustomValidity(""),e.removeEventListener("input",t)};e.addEventListener("input",t)}updateUser(e,t){this.clearErrors(),n.users.update(e,t).then((e=>{this.open=!1;try{this.onUpdate(e)}catch(e){console.error(e)}})).catch((e=>{var t;400!==(null===(t=e.response)||void 0===t?void 0:t.status)?this.unhandledError=!0:e.response.json().then((e=>{const{details:t}=e;t.endsWith("already exists for field (email)")?(this.emailInput.setCustomValidity("A user with this Email already exists."),this.emailInput.reportValidity(),this.clearInputValidityOnChange(this.emailInput)):this.unhandledError=!0})).catch((()=>this.unhandledError=!0))}))}onOpenHandler(){const{profileMode:e,userId:t}=this;e&&n.users.get(t).then((e=>this.user=e))}onCloseHandler(){var e;const{profileMode:t}=this;null===(e=this.form)||void 0===e||e.reset(),this.teamsSelector.reset(),this.clearErrors(),t&&(this.user=void 0)}};y.styles=v,t([s({type:Number})],y.prototype,"userId",void 0),t([s({type:Boolean})],y.prototype,"profileMode",void 0),t([s()],y.prototype,"onUpdate",void 0),t([s({type:Boolean,attribute:"inactive-users-become-viewers"})],y.prototype,"inactiveUsersBecomeViewers",void 0),t([o("form")],y.prototype,"form",void 0),t([o("form > input#user-email")],y.prototype,"emailInput",void 0),t([o("div.error")],y.prototype,"errorEl",void 0),t([o("arch-user-teams-selector")],y.prototype,"teamsSelector",void 0),t([i()],y.prototype,"accountTeams",void 0),y=t([a("arch-edit-user-modal")],y);export{y as ArchEditUserModal};
 //# sourceMappingURL=arch-edit-user-modal.js.map

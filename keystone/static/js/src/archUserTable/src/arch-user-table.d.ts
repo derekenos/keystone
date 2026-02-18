@@ -8,6 +8,7 @@ export declare class ArchUserTable extends ArchDataTable<User> {
     userIsStaff: boolean;
     userRole: UserRoles;
     accountMaxUsersReached: boolean;
+    inactiveUsersBecomeViewers: boolean;
     createNewUserModalTrigger: HTMLElement;
     editUserModal: ArchEditUserModal;
     editUserModalTrigger: HTMLElement;
