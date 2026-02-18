@@ -537,6 +537,7 @@ class UserSchema(Schema):
     role: UserRoles
     date_joined: datetime
     last_login: datetime = None
+    is_active: bool
     teams: List[MinimalTeamSchema]
 
 
@@ -559,6 +560,7 @@ class UpdateUserSchema(Schema):
     last_name: Optional[str]
     email: Optional[str]
     role: Optional[UserRoles]
+    is_active: Optional[bool]
     teams: Optional[List[MinimalTeamSchema]]
 
     class Config:
@@ -586,6 +588,7 @@ class UserFilterSchema(FilterSchema):
     # In order to support multiple query values for a single field,
     # use type of Optional[List[T]] and a Field q value like "...__in".
     role: Optional[List[UserRoles]] = Field(None, q="role__in")
+    is_active: Optional[List[bool]] = Field(None, q="is_active__in")
 
 
 ###############################################################################

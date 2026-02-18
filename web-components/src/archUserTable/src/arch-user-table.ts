@@ -23,6 +23,8 @@ export class ArchUserTable extends ArchDataTable<User> {
   @property({ type: Boolean }) userIsStaff!: boolean;
   @property({ type: String }) userRole!: UserRoles;
   @property({ type: Boolean }) accountMaxUsersReached = false;
+  @property({ type: Boolean, attribute: "inactive-users-become-viewers" })
+  inactiveUsersBecomeViewers = false;
 
   @state() createNewUserModalTrigger!: HTMLElement;
   @state() editUserModal!: ArchEditUserModal;
@@ -60,6 +62,22 @@ export class ArchUserTable extends ArchDataTable<User> {
         Object.keys(UserRoles)[
           Object.values(UserRoles).indexOf(role as UserRoles)
         ],
+      (is_active) =>
+        is_active
+          ? "No"
+          : createElement("span", {
+              children: [
+                "Yes",
+                !this.inactiveUsersBecomeViewers
+                  ? ""
+                  : createElement("span", {
+                      className: "info-icon",
+                      innerHTML: "&#9432",
+                      title:
+                        "Deactivated users can still log in but their access is restricted to that of a VIEWER",
+                    }),
+              ],
+            }),
     ];
     this.columns = [
       "username",
@@ -68,6 +86,16 @@ export class ArchUserTable extends ArchDataTable<User> {
       "date_joined",
       "last_login",
       "role",
+      "is_active",
+    ];
+    this.columnFilterDisplayMaps = [
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { true: "No", false: "Yes" },
     ];
     this.columnHeaders = [
       "Username",
@@ -76,8 +104,9 @@ export class ArchUserTable extends ArchDataTable<User> {
       "Date Created",
       "Last Login",
       "Role",
+      "Deactivated",
     ];
-    this.filterableColumns = [false, false, false, false, false, true];
+    this.filterableColumns = [false, false, false, false, false, true, true];
     this.pageLength = 50;
     this.persistSearchStateInUrl = true;
     this.pluralName = "Account Users";
@@ -87,7 +116,7 @@ export class ArchUserTable extends ArchDataTable<User> {
     this.selectable = isStaffOrAdmin;
     this.singleName = "Account User";
     this.sort = "username,role";
-    this.sortableColumns = [true, true, true, true, true, true];
+    this.sortableColumns = [true, true, true, true, true, true, true];
 
     // Display "Create User" button to staff / admin users.
     if (isStaffOrAdmin) {
@@ -104,6 +133,8 @@ export class ArchUserTable extends ArchDataTable<User> {
   }
 
   render() {
+    const { inactiveUsersBecomeViewers } = this;
+
     // Instantiate the user create modal and create a trigger element.
     const createNewUserModal = new ArchCreateNewUserModal();
     createNewUserModal.accountId = this.accountId;
@@ -115,6 +146,7 @@ export class ArchUserTable extends ArchDataTable<User> {
     this.editUserModal = new ArchEditUserModal();
     this.editUserModal.userId = this.userId;
     this.editUserModal.onUpdate = () => void this.dataTable.throttledDoSearch();
+    this.editUserModal.inactiveUsersBecomeViewers = inactiveUsersBecomeViewers;
     this.editUserModalTrigger = this._createHiddenModalTriggerButton();
     this.editUserModal.appendChild(this.editUserModalTrigger);
 

@@ -38,6 +38,33 @@ export default [
       cursor: not-allowed;
     }
 
+    form > span#user-deactivated-wrapper {
+      display: inline-block;
+    }
+
+    form > span#user-deactivated-wrapper > span.info-icon {
+      margin-left: 0.3rem;
+      cursor: help;
+    }
+
+    form > span#user-deactivated-wrapper > input {
+      width: unset;
+      margin-top: 1rem;
+    }
+
+    form > span#user-deactivated-wrapper > label {
+      display: inline-block;
+      margin-top: 1rem;
+    }
+
+    form > span#user-deactivated-wrapper.disabled {
+      cursor: not-allowed;
+    }
+
+    form > span#user-deactivated-wrapper.disabled > * {
+      cursor: unset;
+    }
+
     form > label[for="send-email"] {
       margin-left: 0.5em;
     }

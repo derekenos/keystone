@@ -45,6 +45,7 @@ Account
       {{ "userIsStaff" if user.is_superuser or user.is_staff else "" }}
       userRole='{{ user.role }}'
       {{ "accountMaxUsersReached" if account_max_users_reached else "" }}
+      {{ "inactive-users-become-viewers" if inactive_users_become_viewers else "" }}
     >
     </arch-user-table>
   </div>

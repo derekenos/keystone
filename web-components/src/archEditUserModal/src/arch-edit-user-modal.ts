@@ -21,6 +21,8 @@ export class ArchEditUserModal extends ArchModal {
   @property({ type: Boolean }) profileMode = false;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   @property() onUpdate: (user: User) => void = (user) => null;
+  @property({ type: Boolean, attribute: "inactive-users-become-viewers" })
+  inactiveUsersBecomeViewers = false;
 
   @query("form") form!: HTMLFormElement;
   @query("form > input#user-email") emailInput!: HTMLInputElement;
@@ -49,7 +51,8 @@ export class ArchEditUserModal extends ArchModal {
   static styles = styles;
 
   set user(user: undefined | User) {
-    const { accountTeams, profileMode, userId } = this;
+    const { accountTeams, inactiveUsersBecomeViewers, profileMode, userId } =
+      this;
     // Clear the content if user has been set to undefined.
     if (user === undefined) {
       this.content = html``;
@@ -107,6 +110,29 @@ export class ArchEditUserModal extends ArchModal {
                   `
                 )}
               </select>
+              <span
+                id="user-deactivated-wrapper"
+                title=${!userIsSelf
+                  ? ""
+                  : "Your activation status can only be changed by another Admin"}
+                class=${userIsSelf ? "disabled" : ""}
+              >
+                <input
+                  type="checkbox"
+                  id="user-deactivated"
+                  name="user-deactivated"
+                  ?checked=${!user.is_active}
+                  ?disabled=${userIsSelf}
+                />
+                <label for="user-deactivated">Deactivated</label>
+                ${!inactiveUsersBecomeViewers
+                  ? ""
+                  : html` <span
+                      class="info-icon"
+                      title="Deactivated users can still log in but their access is restricted to that of a VIEWER"
+                      >&#9432;</span
+                    >`}
+              </span>
             `}
         ${accountTeams.length === 0 && profileMode && !userIsAdmin
           ? html``
@@ -156,6 +182,7 @@ export class ArchEditUserModal extends ArchModal {
       first_name: formData.get("first-name") as string,
       last_name: formData.get("last-name") as string,
       role: formData.get("user-role") as User["role"],
+      is_active: formData.get("user-deactivated") !== "on",
       teams: teamsSelector.selectedOptions,
     };
     this.updateUser(userId, data);

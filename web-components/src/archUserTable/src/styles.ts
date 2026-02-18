@@ -23,5 +23,14 @@ export default [
     data-table > table > thead > tr > th.role {
       width: 5em;
     }
+
+    data-table > table > thead > tr > th.deactivated {
+      width: 8em;
+    }
+
+    data-table > table > tbody > tr > td.is_active .info-icon {
+      margin-left: 0.4rem;
+      cursor: help;
+    }
   `,
 ];

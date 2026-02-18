@@ -184,7 +184,12 @@ def account_users(request):
     if request.user.role != UserRoles.ADMIN:
         return HttpResponseNotFound()
     return render(
-        request, "keystone/account-users.html", context={"user": request.user}
+        request,
+        "keystone/account-users.html",
+        context={
+            "user": request.user,
+            "inactive_users_become_viewers": settings.ALLOW_INACTIVE_USER_AS_VIEWER,
+        },
     )
 
 
