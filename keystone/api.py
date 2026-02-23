@@ -1161,14 +1161,10 @@ def update_user(request, payload: UpdateUserSchema, user_id: int):
         if k == "teams":
             team_ids = {x["id"] for x in v}
             if team_ids != set(target_user.teams.values_list("id", flat=True)):
-                if req_user.has_perm(
-                    Permissions.ADMIN_ACCOUNT, target_user.account
-                ):
+                if req_user.has_perm(Permissions.ADMIN_ACCOUNT, target_user.account):
                     target_user.teams.set(Team.objects.filter(id__in=team_ids))
                 else:
-                    raise PermissionDenied(
-                        "only account admins can update user teams"
-                    )
+                    raise PermissionDenied("only account admins can update user teams")
         else:
             setattr(target_user, k, v)
             updated = True

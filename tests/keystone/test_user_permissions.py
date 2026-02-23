@@ -1,4 +1,5 @@
 import re
+from collections import OrderedDict
 from http import HTTPStatus
 from importlib import resources
 
@@ -155,9 +156,9 @@ def parse_next_table(fh):
 
 
 def parse_test_cases_from_permissions_md():
-    """Return a test cases list in the format:
-    [
-      [
+    """Return a tuple of test case tuples in the format:
+    (
+      (
         <ALLOW_INACTIVE_USER_AS_VIEWER>,
         <user_role>,
         <user_is_active>
@@ -165,12 +166,15 @@ def parse_test_cases_from_permissions_md():
         <test_method>,
         <has_perm>,
         <perm_condition>,
-      ],
+      ),
       ...
-    ]
+    )
     """
-    test_cases = []
-    fh = resources.open_text("tests.keystone", "user-permissions-matrix.md")
+    # Use an OrderedDict with test_case keys and None-type values so that we can
+    # assert that each parsed test case is unique while maintaining the original table
+    # test case order.
+    test_cases_d = OrderedDict()
+    fh = (resources.files("tests.keystone") / "user-permissions-matrix.md").open("r")
     for _ in (True, False):
         allow_inactive_user_as_viewer_setting = (
             parse_next_allow_inactive_user_as_viewer_setting(fh)
@@ -186,17 +190,19 @@ def parse_test_cases_from_permissions_md():
                     has_perm = gd["has_perm"] == "Yes"
                     perm_condition = gd["perm_condition"]
                     for test_method in CATEGORY_FIELD_TEST_METHODS_MAP[category][k]:
-                        test_cases.append(
-                            [
-                                allow_inactive_user_as_viewer_setting,
-                                user_role,
-                                user_is_active,
-                                account_is_active,
-                                test_method,
-                                has_perm,
-                                perm_condition,
-                            ]
+                        test_case = (
+                            allow_inactive_user_as_viewer_setting,
+                            user_role,
+                            user_is_active,
+                            account_is_active,
+                            test_method,
+                            has_perm,
+                            perm_condition,
                         )
+                        # Assert that test case is unique.
+                        assert test_case not in test_cases_d
+                        test_cases_d[test_case] = None
+    test_cases = tuple(test_cases_d)
     # Assert that parsing yieled the expected number of test cases.
     num_test_cases = len(test_cases)
     if num_test_cases != NUM_EXPECTED_TEST_CASES:
