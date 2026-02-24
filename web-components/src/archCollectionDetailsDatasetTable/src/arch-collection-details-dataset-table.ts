@@ -57,8 +57,8 @@ export class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
     const { hideGenerateDataset, isOptedOutCollection } = this;
 
     this.apiCollectionEndpoint = "/datasets";
-    this.apiItemResponseIsArray = true;
-    this.apiItemTemplate = "/datasets?id=:id";
+    this.apiItemsTemplateFn = (datasets: Array<Dataset>) =>
+      `/datasets?${datasets.map((x) => `id=${x.id}`).join("&")}`;
     this.itemPollPredicate = (item) => isActiveProcessingState(item.state);
     this.itemPollPeriodSeconds = 3;
     this.apiStaticParamPairs = [["collection_id", `${this.collectionId}`]];

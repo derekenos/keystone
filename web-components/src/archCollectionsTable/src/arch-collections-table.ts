@@ -111,8 +111,8 @@ export class ArchCollectionsTable extends ArchDataTable<Collection> {
       }
     }
     this.apiCollectionEndpoint = "/collections";
-    this.apiItemResponseIsArray = true;
-    this.apiItemTemplate = "/collections?id=:id";
+    this.apiItemsTemplateFn = (collections: Array<Collection>) =>
+      `/collections?${collections.map((x) => `id=${x.id}`).join("&")}`;
     // Maybe show only hidden collections.
     if (showHidden) {
       this.apiStaticParamPairs = [["opted_out", "true"]];

@@ -52,6 +52,7 @@ export class AitDataTable<RowT> extends LitElement {
   @property() apiItemResponseIsArray: PropsT<RowT>["apiItemResponseIsArray"] =
     false;
   @property() apiItemTemplate: PropsT<RowT>["apiItemTemplate"] = null;
+  @property() apiItemsTemplateFn: PropsT<RowT>["apiItemsTemplateFn"] = null;
   @property({ type: Array })
   apiStaticParamPairs: PropsT<RowT>["apiStaticParamPairs"] = [];
   @property() cellRenderers: PropsT<RowT>["cellRenderers"] = [];
@@ -119,6 +120,7 @@ export class AitDataTable<RowT> extends LitElement {
         apiCollectionEndpoint: this.apiCollectionEndpoint,
         apiItemResponseIsArray: this.apiItemResponseIsArray,
         apiItemTemplate: this.apiItemTemplate,
+        apiItemsTemplateFn: this.apiItemsTemplateFn,
         apiStaticParamPairs: this.apiStaticParamPairs,
         cellRenderers: this.cellRenderers,
         columnHeaders: this.columnHeaders,
