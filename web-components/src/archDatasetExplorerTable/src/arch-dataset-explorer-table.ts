@@ -92,8 +92,8 @@ export class ArchDatasetExplorerTable extends ArchDataTable<Dataset> {
     const { hideGenerateDataset, showHidden } = this;
 
     this.apiCollectionEndpoint = "/datasets";
-    this.apiItemResponseIsArray = true;
-    this.apiItemTemplate = "/datasets?id=:id";
+    this.apiItemsTemplateFn = (datasets: Array<Dataset>) =>
+      `/datasets?${datasets.map((x) => `id=${x.id}`).join("&")}`;
     this.itemPollPredicate = (item) => isActiveProcessingState(item.state);
     this.itemPollPeriodSeconds = 3;
     // Maybe show only hidden datasets.

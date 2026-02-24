@@ -84,6 +84,16 @@ export default class DataTable extends AngularMixin(HTMLElement) {
          */
         ["apiItemTemplate", null],
 
+        /* apiItemsTemplateFn is an optional function that, given an array of row
+           objects, will return an API-relative URL that will return an array of
+           the corresponding items. Item polling will use this function if specified
+           to batch queries as opposed to making a request to this.apiItemTemplate
+           for each row object.
+
+           e.g. (rows) => `/items?${rows.map(r => `id=${r.id}`).join("&")}`
+         */
+        ["apiItemsTemplateFn", null],
+
         /* apiStaticParamPairs is an array of two-element [ <field>, <value> ]
            arrays defining the base query params, e.g. [[ 'collection_id', 1 ]]
          */
@@ -899,9 +909,10 @@ export default class DataTable extends AngularMixin(HTMLElement) {
 
   setRowsToPoll(rows) {
     /* Set state.rowsToPoll and kick off polling if non-empty */
+    const pollingAlreadyActive = this.state.rowsToPoll.length > 0;
     const { itemPollPeriodSeconds } = this.props;
     this.state.rowsToPoll = rows;
-    if (rows.length > 0) {
+    if (rows.length > 0 && !pollingAlreadyActive) {
       setTimeout(this.pollRows.bind(this), itemPollPeriodSeconds * 1000);
     }
   }
@@ -912,6 +923,7 @@ export default class DataTable extends AngularMixin(HTMLElement) {
       API,
       apiItemResponseIsArray,
       apiItemTemplate,
+      apiItemsTemplateFn,
       itemPollPeriodSeconds,
       itemPollPredicate,
       rowIdColumn,
@@ -922,11 +934,18 @@ export default class DataTable extends AngularMixin(HTMLElement) {
       return;
     }
     // Request rows from the API.
-    let polledRows = await Promise.all(
-      rowsToPoll.map(async (row) =>
-        (await API.get(populateTemplate(apiItemTemplate, row))).json()
-      )
-    );
+    let polledRows;
+    if (apiItemsTemplateFn) {
+      // Make a single, batched request.
+      polledRows = await (await API.get(apiItemsTemplateFn(rowsToPoll))).json();
+    } else {
+      // Make a separate request for each row.
+      polledRows = await Promise.all(
+        rowsToPoll.map(async (row) =>
+          (await API.get(populateTemplate(apiItemTemplate, row))).json()
+        )
+      );
+    }
     // Unpack single-element Array-type responses.
     if (apiItemResponseIsArray) {
       polledRows = polledRows.map((row) => row[0]);
