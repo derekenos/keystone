@@ -38,6 +38,7 @@ export interface DataTable<RowT> extends HTMLElement {
         apiCollectionEndpoint: string;
         apiItemResponseIsArray: boolean;
         apiItemTemplate: string | null;
+        apiItemsTemplateFn: null | ((rows: Array<RowT>) => string);
         apiStaticParamPairs: Array<[string, string]>;
         cellRenderers: Array<((field: ValueOf<RowT>, row: RowT) => string | HTMLElement) | Record<string, string> | undefined>;
         columnHeaders: Array<string>;

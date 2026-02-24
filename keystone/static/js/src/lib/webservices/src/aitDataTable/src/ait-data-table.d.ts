@@ -12,6 +12,7 @@ export declare class AitDataTable<RowT> extends LitElement {
     apiCollectionEndpoint: PropsT<RowT>["apiCollectionEndpoint"];
     apiItemResponseIsArray: PropsT<RowT>["apiItemResponseIsArray"];
     apiItemTemplate: PropsT<RowT>["apiItemTemplate"];
+    apiItemsTemplateFn: PropsT<RowT>["apiItemsTemplateFn"];
     apiStaticParamPairs: PropsT<RowT>["apiStaticParamPairs"];
     cellRenderers: PropsT<RowT>["cellRenderers"];
     columnHeaders: PropsT<RowT>["columnHeaders"];
