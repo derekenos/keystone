@@ -143,7 +143,9 @@ export type User = {
     teams: Array<MinimalTeam>;
 };
 export type MinimalUser = Pick<User, "id" | "username">;
-export type UserUpdate = Pick<User, "first_name" | "last_name" | "email" | "role" | "is_active" | "teams">;
+export type UserUpdate = Pick<User, "first_name" | "last_name" | "email" | "role" | "teams"> & {
+    is_active?: boolean;
+};
 export type Team = {
     account_id: number;
     id: number;

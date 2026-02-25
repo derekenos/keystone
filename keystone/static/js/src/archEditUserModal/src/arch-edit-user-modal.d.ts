@@ -12,6 +12,7 @@ export declare class ArchEditUserModal extends ArchModal {
     errorEl: HTMLElement;
     teamsSelector: ArchUserTeamsSelector;
     accountTeams: Array<Team>;
+    allowIsActiveModify: boolean;
     constructor();
     private set unhandledError(value);
     static styles: import("lit").CSSResult[];
