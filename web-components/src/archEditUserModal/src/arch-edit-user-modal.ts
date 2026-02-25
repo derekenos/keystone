@@ -31,6 +31,7 @@ export class ArchEditUserModal extends ArchModal {
   teamsSelector!: ArchUserTeamsSelector;
 
   @state() accountTeams: Array<Team> = [];
+  @state() allowIsActiveModify = false;
 
   constructor() {
     super();
@@ -59,6 +60,7 @@ export class ArchEditUserModal extends ArchModal {
       return;
     }
     const userIsSelf = user.id === userId;
+    this.allowIsActiveModify = !(profileMode || userIsSelf);
     const userIsAdmin = user.role === UserRoles.ADMIN;
     this.content = html`
       <form validate>
@@ -167,7 +169,7 @@ export class ArchEditUserModal extends ArchModal {
   }
 
   submit() {
-    const { form, teamsSelector } = this;
+    const { allowIsActiveModify, form, teamsSelector } = this;
 
     // Validate the form and show any errors.
     if (!form.checkValidity()) {
@@ -182,9 +184,11 @@ export class ArchEditUserModal extends ArchModal {
       first_name: formData.get("first-name") as string,
       last_name: formData.get("last-name") as string,
       role: formData.get("user-role") as User["role"],
-      is_active: formData.get("user-active") === "on",
       teams: teamsSelector.selectedOptions,
     };
+    if (allowIsActiveModify) {
+      data.is_active = formData.get("user-active") === "on";
+    }
     this.updateUser(userId, data);
   }
 
