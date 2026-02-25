@@ -1135,26 +1135,26 @@ def update_user(request, payload: UpdateUserSchema, user_id: int):
         raise PermissionDenied
     updated = False
     for k, v in payload.dict(exclude_none=True).items():
-        if getattr(target_user, k) != v:
-            # A user is not allowed to modify their own role.
-            if k == "role" and target_user == req_user:
-                raise PermissionDenied("self role modification not allowed")
-            # A user is not allowed to modify their own is_active.
-            if k == "is_active" and target_user == req_user:
-                raise PermissionDenied("self is_active modification not allowed")
-            # Handle "teams".
-            if k == "teams":
-                team_ids = {x["id"] for x in v}
-                if team_ids != set(target_user.teams.values_list("id", flat=True)):
-                    if req_user.can_admin_account(target_user.account_id):
-                        target_user.teams.set(Team.objects.filter(id__in=team_ids))
-                    else:
-                        raise PermissionDenied(
-                            "only account admins can update user teams"
-                        )
-            else:
-                setattr(target_user, k, v)
-                updated = True
+        # Ignore unmodified fields.
+        if getattr(target_user, k) == v:
+            continue
+        # A user is not allowed to modify their own role.
+        if k == "role" and target_user == req_user:
+            raise PermissionDenied("self role modification not allowed")
+        # A user is not allowed to modify their own is_active.
+        if k == "is_active" and target_user == req_user:
+            raise PermissionDenied("self is_active modification not allowed")
+        # Handle "teams".
+        if k == "teams":
+            team_ids = {x["id"] for x in v}
+            if team_ids != set(target_user.teams.values_list("id", flat=True)):
+                if req_user.can_admin_account(target_user.account_id):
+                    target_user.teams.set(Team.objects.filter(id__in=team_ids))
+                else:
+                    raise PermissionDenied("only account admins can update user teams")
+        else:
+            setattr(target_user, k, v)
+            updated = True
     if updated:
         target_user.save()
 
