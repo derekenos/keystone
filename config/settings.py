@@ -367,6 +367,7 @@ class KnownArchJobUuids:
 # Define the set of jobs that only work with WARC-type collections.
 WARC_ONLY_JOB_IDS = {
     KnownArchJobUuids.AUDIO_FILE_INFORMATION,
+    KnownArchJobUuids.CDX_DATASET,
     KnownArchJobUuids.DOMAIN_FREQUENCY,
     KnownArchJobUuids.DOMAIN_GRAPH,
     KnownArchJobUuids.IMAGE_FILE_INFORMATION,
