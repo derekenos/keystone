@@ -1,14 +1,13 @@
 import { PropertyValues } from "lit";
-import { User, UserRoles } from "../../lib/types";
+import { User } from "../../lib/types";
 import { ArchDataTable } from "../../archDataTable/index";
 import { ArchEditUserModal } from "../../archEditUserModal/index.js";
 export declare class ArchUserTable extends ArchDataTable<User> {
     accountId: number;
     userId: number;
-    userIsStaff: boolean;
-    userRole: UserRoles;
     accountMaxUsersReached: boolean;
     inactiveUsersBecomeViewers: boolean;
+    readonly: boolean;
     createNewUserModalTrigger: HTMLElement;
     editUserModal: ArchEditUserModal;
     editUserModalTrigger: HTMLElement;

@@ -1,12 +1,11 @@
 import { PropertyValues } from "lit";
-import { Team, User, UserRoles } from "../../lib/types";
+import { Team, User } from "../../lib/types";
 import { ArchDataTable } from "../../archDataTable/index";
 import { ArchEditTeamModal } from "../../archEditTeamModal/index";
 export declare class ArchTeamTable extends ArchDataTable<Team> {
     accountId: number;
     userId: User["id"];
-    userIsStaff: boolean;
-    userRole: UserRoles;
+    readonly: boolean;
     createNewTeamModalTrigger: HTMLElement;
     editTeamModal: ArchEditTeamModal;
     editTeamModalTrigger: HTMLElement;
