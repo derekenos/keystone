@@ -9,7 +9,6 @@ from django.forms import model_to_dict
 from django.http import (
     HttpResponseBadRequest,
     HttpResponseForbidden,
-    HttpResponseNotFound,
     JsonResponse,
 )
 from django.shortcuts import (
@@ -30,7 +29,6 @@ from .models import (
     JobFile,
     JobStart,
     User,
-    UserRoles,
 )
 from .permissions import Permissions
 from .schemas import (
@@ -70,9 +68,28 @@ CUSTOM_COLLECTION_PARAM_KEY_LABEL_FORMATTER_TUPLES = (
 
 
 def request_user_is_staff_or_superuser(request):
-    """Return true if user is staff or a superuser"""
+    """Return True if user is staff or a superuser"""
 
-    return request.user.is_staff or request.user.is_superuser
+    user = request.user
+    return user.is_authenticated and (user.is_staff or user.is_superuser)
+
+
+def request_user_is_active_admin(request):
+    """Return True if user is an active admin"""
+
+    user = request.user
+    return user.is_authenticated and user.is_active_admin
+
+
+def request_user_has_perm(perm_name):
+    """Return a function that will return True if the request user has the
+    specified permission.
+    """
+
+    def f(request):
+        return request.user.has_perm(getattr(Permissions, perm_name))
+
+    return f
 
 
 def format_custom_collection_crawl_date(s):
@@ -81,27 +98,110 @@ def format_custom_collection_crawl_date(s):
     return datetime.strftime(datetime.strptime(s, "%Y%m%d%H%M%S00"), "%h %d, %Y")
 
 
+def get_custom_collection_configuration_info(collection):
+    """Return a configuration info dict comprising the custom collections's
+    input collections and configuration parameters."""
+    # Lookup the custom collection job configuration.
+    try:
+        custom_conf = collection.jobstart_set.get(
+            job_type__id=settings.KnownArchJobUuids.USER_DEFINED_QUERY
+        ).parameters["conf"]
+    except JobStart.DoesNotExist:
+        # If for some reason there's no associated JobStart, return
+        # input_collections=None which will will cause an error message
+        # to be displayed on the frontend.
+        return {
+            "input_collections": None,
+            "param_label_value_pairs": (),
+        }
+    # Create the list of input collections.
+    input_spec = custom_conf["inputSpec"]
+    try:
+        input_collections = (
+            [Collection.get_for_input_spec(x) for x in input_spec["specs"]]
+            if input_spec["type"] == MULTI_INPUT_SPEC_TYPE
+            else [Collection.get_for_input_spec(input_spec)]
+        )
+    except Collection.DoesNotExist:
+        # If for some reason an input_spec can't be resolved to a collection,
+        # set input_collections=None which will cause an error message to be
+        # displayed on the frontend.
+        input_collections = None
+    # Create the list of param label/value pairs.
+    custom_params = custom_conf["params"]
+    custom_param_pairs = []
+    for (
+        param_key,
+        param_label,
+        param_formatter,
+    ) in CUSTOM_COLLECTION_PARAM_KEY_LABEL_FORMATTER_TUPLES:
+        if param_key not in custom_params:
+            continue
+        custom_param_pairs.append(
+            (param_label, param_formatter(custom_params[param_key]))
+        )
+    return {
+        "input_collections": input_collections,
+        "param_label_value_pairs": custom_param_pairs,
+    }
+
+
+def get_special_collection_configuration_info(collection):
+    """Return a configuration info dict comprising the special collections's
+    configuration parameters, or None if no such configuration exists."""
+    if not collection.metadata:
+        return None
+    input_spec = validate_collection_metadata(
+        collection.metadata, collection
+    ).input_spec
+    if not input_spec:
+        return None
+    if not hasattr(input_spec, "get_collection_configuration_pairs"):
+        return None
+    pairs = input_spec.get_collection_configuration_pairs()
+    return None if not pairs else {"param_label_value_pairs": pairs}
+
+
 ###############################################################################
 # Decorators
 ###############################################################################
 
 
-def require_staff_or_superuser(view_func):
-    """View function decorator to return a 403 if the requesting user is not
-    staff or a superuser.
+def user_passes_test(test_fn):
+    """Variation of django.contrib.auth.decorators.user_passes_test() that
+    returns a 403 instead of redirecting to the login page.
     """
 
-    @functools.wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        if not request_user_is_staff_or_superuser(request):
-            return HttpResponseForbidden()
-        return view_func(request, *args, **kwargs)
+    def decorator(view_func):
+        """View function decorator to return a 403 if the requesting user is not
+        staff or a superuser.
+        """
 
-    return wrapper
+        @functools.wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            if not test_fn(request):
+                return HttpResponseForbidden()
+            return view_func(request, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+require_staff_or_superuser = user_passes_test(request_user_is_staff_or_superuser)
+
+
+def require_permission(perm_name):
+    """Decorator to forbid request if doesn't possess the specified permission.
+    We pass the permission name instead of a reference to the Permissions object
+    attribute because the latter requires that the database connection be established
+    which may not yet true at module load time.
+    """
+    return user_passes_test(request_user_has_perm(perm_name))
 
 
 ###############################################################################
-# Views
+# Authenticated Staff and Superuser Views
 ###############################################################################
 
 
@@ -171,37 +271,48 @@ def collection_surveyor_search(request):
     )
 
 
-@login_required
+@require_staff_or_superuser
+def get_arch_job_logs(request, log_type):
+    """Return an ARCH job log response."""
+    valid_log_types = ("jobs", "running", "failed")
+    if log_type not in valid_log_types:
+        return HttpResponseBadRequest(
+            f"Unsupported log_type: {log_type}. Please specify one of: {valid_log_types}"
+        )
+    user = User.objects.get(username=settings.ARCH_SYSTEM_USER)
+    return ArchAPI.proxy_admin_logs_request(user, log_type)
+
+
+###############################################################################
+# Authenticated Admin Views
+###############################################################################
+
+
+@require_permission("LIST_ACCOUNT_USERS")
 def account(request):
     """Redirect to account-users view."""
     return redirect("account-users")
 
 
-@login_required
+@require_permission("LIST_ACCOUNT_USERS")
 def account_users(request):
     """Account users admin"""
-    # Deny non-admins.
-    if request.user.role != UserRoles.ADMIN:
-        return HttpResponseNotFound()
     return render(
-        request,
-        "keystone/account-users.html",
-        context={
-            "user": request.user,
-            "inactive_users_become_viewers": settings.ALLOW_INACTIVE_USER_AS_VIEWER,
-        },
+        request, "keystone/account-users.html", context={"user": request.user}
     )
 
 
-@login_required
+@require_permission("LIST_ACCOUNT_TEAMS")
 def account_teams(request):
     """Account teams admin"""
-    # Deny non-admins.
-    if request.user.role != UserRoles.ADMIN:
-        return HttpResponseNotFound()
     return render(
         request, "keystone/account-teams.html", context={"user": request.user}
     )
+
+
+###############################################################################
+# Authenticated Normal User Views
+###############################################################################
 
 
 @login_required
@@ -243,75 +354,10 @@ def hidden_collections(request):
 
 
 @login_required
+@require_permission("CREATE_CUSTOM_COLLECTION")
 def sub_collection_builder(request):
     """Sub-Collection Builder"""
-    if not request.user.has_perm(Permissions.CREATE_CUSTOM_COLLECTION):
-        return HttpResponseNotFound()
     return render(request, "keystone/sub-collection-builder.html")
-
-
-def get_custom_collection_configuration_info(collection):
-    """Return a configuration info dict comprising the custom collections's
-    input collections and configuration parameters."""
-    # Lookup the custom collection job configuration.
-    try:
-        custom_conf = collection.jobstart_set.get(
-            job_type__id=settings.KnownArchJobUuids.USER_DEFINED_QUERY
-        ).parameters["conf"]
-    except JobStart.DoesNotExist:
-        # If for some reason there's no associated JobStart, return
-        # input_collections=None which will will cause an error message
-        # to be displayed on the frontend.
-        return {
-            "input_collections": None,
-            "param_label_value_pairs": (),
-        }
-    # Create the list of input collections.
-    input_spec = custom_conf["inputSpec"]
-    try:
-        input_collections = (
-            [Collection.get_for_input_spec(x) for x in input_spec["specs"]]
-            if input_spec["type"] == MULTI_INPUT_SPEC_TYPE
-            else [Collection.get_for_input_spec(input_spec)]
-        )
-    except Collection.DoesNotExist:
-        # If for some reason an input_spec can't be resolved to a collection,
-        # set input_collections=None which will cause an error message to be
-        # displayed on the frontend.
-        input_collections = None
-    # Create the list of param label/value pairs.
-    custom_params = custom_conf["params"]
-    custom_param_pairs = []
-    for (
-        param_key,
-        param_label,
-        param_formatter,
-    ) in CUSTOM_COLLECTION_PARAM_KEY_LABEL_FORMATTER_TUPLES:
-        if param_key not in custom_params:
-            continue
-        custom_param_pairs.append(
-            (param_label, param_formatter(custom_params[param_key]))
-        )
-    return {
-        "input_collections": input_collections,
-        "param_label_value_pairs": custom_param_pairs,
-    }
-
-
-def get_special_collection_configuration_info(collection):
-    """Return a configuration info dict comprising the special collections's
-    configuration parameters, or None if no such configuration exists."""
-    if not collection.metadata:
-        return None
-    input_spec = validate_collection_metadata(
-        collection.metadata, collection
-    ).input_spec
-    if not input_spec:
-        return None
-    if not hasattr(input_spec, "get_collection_configuration_pairs"):
-        return None
-    pairs = input_spec.get_collection_configuration_pairs()
-    return None if not pairs else {"param_label_value_pairs": pairs}
 
 
 @login_required
@@ -375,10 +421,9 @@ def datasets_explore(request):
 
 
 @login_required
+@require_permission("GENERATE_DATASET")
 def datasets_generate(request):
     """Dataset generation form"""
-    if not request.user.has_perm(Permissions.GENERATE_DATASET):
-        return HttpResponseNotFound()
     return render(request, "keystone/datasets-generate.html")
 
 
@@ -430,8 +475,6 @@ def dataset_detail(request, dataset_id):
             "files": files,
             "show_single_file_preview": len(files) == 1 and files[0].line_count > 0,
             "user_settings": user_settings,
-            "omit_colab": settings.COLAB_DISABLED
-            or not user.has_perm(Permissions.CREATE_NOTEBOOK),
             "omit_publishing": settings.PUBLISHING_DISABLED,
             "disable_publishing": not user.has_perm(
                 Permissions.PUBLISH_DATASET, dataset
@@ -457,40 +500,10 @@ def dataset_file_preview(request, dataset_id, filename):
     )
 
 
-def dataset_file_download(request, dataset_id, filename):
-    """Download a Dataset file."""
-    access_token = request.GET.get("access")
-    if access_token is not None:
-        # Do an anonymous, access_key-based download request.
-        user = AnonymousUser()
-        dataset = get_object_or_404(Dataset, id=dataset_id)
-    elif request.user.is_anonymous:
-        # Deny anonymous requests that don't specify an access key.
-        return HttpResponseForbidden()
-    else:
-        # Do a non-access_key-based / potentially-logged-in-user download request.
-        # Lookup the Dataset using request.user.
-        dataset = get_object_or_404(
-            Dataset.user_queryset(request.user, include_opted_out=True), id=dataset_id
-        )
-        # Request on behalf of the Dataset owner in the event of teammate access.
-        user = dataset.job_start.user
-
-    return ArchAPI.proxy_file_download(
-        user=user,
-        job_run_uuid=dataset.job_start.id,
-        filename=filename,
-        download_filename=dataset.get_download_filename(filename),
-        access_token=access_token,
-    )
-
-
 @login_required
 def dataset_file_colab(request, dataset_id, filename):
     """Open a Dataset file in Google Colab."""
     user = request.user
-    if not user.has_perm(Permissions.CREATE_NOTEBOOK):
-        return HttpResponseForbidden()
     dataset = get_object_or_404(
         Dataset.user_queryset(user, include_opted_out=True), id=dataset_id
     )
@@ -515,13 +528,37 @@ def dataset_file_colab(request, dataset_id, filename):
     )
 
 
-@require_staff_or_superuser
-def get_arch_job_logs(request, log_type):
-    """Return an ARCH job log response."""
-    valid_log_types = ("jobs", "running", "failed")
-    if log_type not in valid_log_types:
-        return HttpResponseBadRequest(
-            f"Unsupported log_type: {log_type}. Please specify one of: {valid_log_types}"
+###############################################################################
+# Multi-Authentication Option Views
+###############################################################################
+
+
+def dataset_file_download(request, dataset_id, filename):
+    """Download a Dataset file."""
+    access_token = request.GET.get("access")
+    if access_token is not None:
+        # Do an anonymous, access_key-based download request.
+        user = AnonymousUser()
+        dataset = get_object_or_404(Dataset, id=dataset_id)
+    elif request.user.is_anonymous:
+        # Deny anonymous requests that don't specify an access key.
+        return HttpResponseForbidden()
+    else:
+        # Do a non-access_key-based / potentially-logged-in-user download request.
+        # Lookup the Dataset using request.user.
+        dataset = get_object_or_404(
+            Dataset.user_queryset(request.user, include_opted_out=True), id=dataset_id
         )
-    user = User.objects.get(username=settings.ARCH_SYSTEM_USER)
-    return ArchAPI.proxy_admin_logs_request(user, log_type)
+        # Ensure view/download permissions.
+        if not request.user.has_perm(Permissions.VIEW_DATASET, dataset):
+            return HttpResponseForbidden()
+        # Request on behalf of the Dataset owner in the event of teammate access.
+        user = dataset.job_start.user
+
+    return ArchAPI.proxy_file_download(
+        user=user,
+        job_run_uuid=dataset.job_start.id,
+        filename=filename,
+        download_filename=dataset.get_download_filename(filename),
+        access_token=access_token,
+    )

@@ -1,4 +1,6 @@
+from datetime import datetime, timezone
 from functools import partial
+
 from model_bakery import baker
 from pytest import fixture
 
@@ -135,6 +137,7 @@ def make_user_dataset(
         make_jobfile(job_complete=job_complete, size_bytes=COLAB_MAX_FILE_SIZE_BYTES)
         dataset = models.Dataset.objects.get(job_start=job_start)
         dataset.state = models.JobEventTypes.FINISHED
+        dataset.finished_time = datetime.now().replace(tzinfo=timezone.utc)
         dataset.save()
         return dataset
 

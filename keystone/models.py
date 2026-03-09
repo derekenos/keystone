@@ -70,6 +70,19 @@ class Account(models.Model):
             choice_constraint(field="type", choices=AccountTypes),
         ]
 
+    def user_has_perm(self, user, perm):
+        """Active Admins of an active account are allowed to perform administrative
+        actions on their own account.
+        """
+        if perm == Permissions.ADMIN_ACCOUNT:
+            return (
+                user.is_active
+                and user.role == UserRoles.ADMIN
+                and user.account.id == self.id
+                and user.account.is_active
+            )
+        return False
+
     def __str__(self):
         return self.name
 
@@ -106,7 +119,13 @@ class User(AbstractUser):
             ("change_role", "Can change user roles"),
             ("create_custom_collection", "Create Custom Collection"),
             ("generate_dataset", "Generate Dataset"),
-            ("create_notebook", "Create Notebook"),
+            ("list_account_users", "List Account Users"),
+            ("add_account_user", "Add Account User"),
+            ("change_account_user", "Change Account User"),
+            ("list_account_teams", "List Account Teams"),
+            ("add_account_team", "Add Account Team"),
+            ("change_account_team", "Change Account Team"),
+            ("admin_account", "Administer Account"),
         ]
 
     @property
@@ -117,23 +136,12 @@ class User(AbstractUser):
         return f"ks:{self.username}"
 
     @property
-    def is_viewer(self):
-        """Return a bool indicating whether this user should be constrained to
-        Viewer-level permissions based on whether their role=VIEWER or their
-        account or themself is inactive."""
+    def effective_role(self):
+        """If the user or their account is inactive, their effective role is VIEWER."""
         return (
-            self.role == UserRoles.VIEWER
-            or not self.account.is_active
-            or not self.is_active
-        )
-
-    def can_admin_account(self, account_id):
-        """Return a bool indicating whether the user is allowed to perform
-        administrative actions on the specified account."""
-        return (
-            self.role == UserRoles.ADMIN
-            and self.account.id == account_id
-            and self.account.is_active
+            UserRoles.VIEWER
+            if (not self.account.is_active or not self.is_active)
+            else self.role
         )
 
     def save(self, *args, **kwargs):
@@ -142,6 +150,7 @@ class User(AbstractUser):
         self.email = BaseUserManager.normalize_email(self.email)
         super().save()
 
+    # pylint: disable-next=too-many-return-statements
     def has_perm(self, perm, obj=None):
         """Return a bool indicate whether the user has the specified permission.
         If obj is specified and obj defines a user_has_perm() method, delegate
@@ -162,9 +171,23 @@ class User(AbstractUser):
             if perm in (
                 Permissions.CREATE_CUSTOM_COLLECTION,
                 Permissions.GENERATE_DATASET,
-                Permissions.CREATE_NOTEBOOK,
             ):
-                return not self.is_viewer
+                return self.effective_role != UserRoles.VIEWER
+            if perm in (
+                Permissions.LIST_ACCOUNT_USERS,
+                Permissions.LIST_ACCOUNT_TEAMS,
+            ):
+                return self.role == UserRoles.ADMIN and self.is_active
+            if perm in (
+                Permissions.ADD_ACCOUNT_USER,
+                Permissions.CHANGE_ACCOUNT_USER,
+                Permissions.ADD_ACCOUNT_TEAM,
+                Permissions.CHANGE_ACCOUNT_TEAM,
+            ):
+                return (
+                    self.role == UserRoles.ADMIN
+                    and self.effective_role != UserRoles.VIEWER
+                )
         elif hasattr(obj, "user_has_perm"):
             # Delegate to any Model-defined user_has_perm() method.
             return obj.user_has_perm(self, perm)
@@ -179,7 +202,7 @@ class User(AbstractUser):
         view/change any user within their account.
         """
         # To clarify, we are checking whether `user` has permission `perm` on `self`.
-        can_admin_account = user.can_admin_account(self.account_id)
+        can_admin_account = user.has_perm(Permissions.ADMIN_ACCOUNT, self.account)
         match perm:
             case Permissions.VIEW_USER | Permissions.CHANGE_USER:
                 # Users are allowed to view/change themselves, and admins are allowed to
@@ -243,7 +266,7 @@ class Team(models.Model):
         match perm:
             case Permissions.ADD_TEAM | Permissions.CHANGE_TEAM:
                 # An admin has permission to create and change teams within their own account.
-                return user.can_admin_account(self.account_id)
+                return user.has_perm(Permissions.ADMIN_ACCOUNT, self.account)
             case _:
                 return False
 
@@ -442,7 +465,7 @@ class Collection(models.Model):
                 # Non-viewer users are allowed to modify non-opted-out custom collections
                 # of which they are the creator (i.e. associated JobStart user)
                 return (
-                    not user.is_viewer
+                    user.effective_role != UserRoles.VIEWER
                     and JobStart.objects.filter(
                         collection=self,
                         job_type__id=settings.KnownArchJobUuids.USER_DEFINED_QUERY,
@@ -459,7 +482,7 @@ class Collection(models.Model):
                 # Non-viewer users are allowed to generate a dataset on a non-empty collection
                 # to which they have access and from which they have not opted out.
                 return (
-                    not user.is_viewer
+                    user.effective_role != UserRoles.VIEWER
                     and self.size_bytes != 0
                     and self.user_queryset(user).filter(id=self.id).exists()
                 )
@@ -822,10 +845,16 @@ class Dataset(models.Model):
                 )
             case Permissions.CHANGE_DATASET_TEAMS:
                 # A Dataset creator is allowed to change associated teams.
-                return user.id == self.job_start.user_id
+                return (
+                    user.id == self.job_start.user_id
+                    and user.effective_role != UserRoles.VIEWER
+                )
             case Permissions.PUBLISH_DATASET:
                 # An non-Viewer Dataset creator is allowed to publish.
-                return user.id == self.job_start.user_id and not user.is_viewer
+                return (
+                    user.id == self.job_start.user_id
+                    and user.effective_role != UserRoles.VIEWER
+                )
             case _:
                 return False
 

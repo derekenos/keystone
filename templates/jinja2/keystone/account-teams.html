@@ -35,8 +35,7 @@ Account
     <arch-team-table
       accountId="{{ user.account.id }}"
       userId="{{ user.id }}"
-      {{ "userIsStaff" if user.is_superuser or user.is_staff else "" }}
-      userRole='{{ user.role }}'
+      {{ "readonly" if not user.has_perm(Permissions.ADMIN_ACCOUNT, user.account) else "" }}
     >
     </arch-team-table>
   </div>

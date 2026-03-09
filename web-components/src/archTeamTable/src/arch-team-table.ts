@@ -16,8 +16,7 @@ import Styles from "./styles.js";
 export class ArchTeamTable extends ArchDataTable<Team> {
   @property({ type: Number }) accountId!: number;
   @property({ type: Number }) userId!: User["id"];
-  @property({ type: Boolean }) userIsStaff!: boolean;
-  @property({ type: String }) userRole!: UserRoles;
+  @property({ type: Boolean }) readonly = false;
 
   @state() createNewTeamModalTrigger!: HTMLElement;
   @state() editTeamModal!: ArchEditTeamModal;
@@ -27,11 +26,10 @@ export class ArchTeamTable extends ArchDataTable<Team> {
 
   willUpdate(_changedProperties: PropertyValues) {
     super.willUpdate(_changedProperties);
+    const { readonly } = this;
     this.actionButtonDisabled = [false, false];
-    // Add selection action buttons if user is staff or admin.
-    const isStaffOrAdmin =
-      this.userIsStaff || this.userRole === UserRoles.ADMIN;
-    if (isStaffOrAdmin) {
+    // Add selection action buttons if not in readonly mode.
+    if (!readonly) {
       this.actionButtonLabels = ["Edit Team"];
       this.actionButtonSignals = [Topics.DISPLAY_EDIT_TEAM_MODAL];
     }
@@ -49,13 +47,13 @@ export class ArchTeamTable extends ArchDataTable<Team> {
     this.rowClickEnabled = true;
     this.searchColumns = ["name", "members"];
     this.searchColumnLabels = this.searchColumns.map(toTitleCase);
-    this.selectable = isStaffOrAdmin;
+    this.selectable = !readonly;
     this.singleName = "Account Team";
     this.sort = "-id";
     this.sortableColumns = [true];
 
     // Display "Create User" button to staff / admin users.
-    if (isStaffOrAdmin) {
+    if (!readonly) {
       this.nonSelectionActions = [Topics.DISPLAY_CREATE_TEAM_MODAL];
       this.nonSelectionActionLabels = ["Create New Team"];
     }

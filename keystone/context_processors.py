@@ -4,6 +4,7 @@ from django.conf import settings as _settings
 from django.shortcuts import reverse
 
 from keystone.models import CollectionTypes
+from keystone.permissions import Permissions
 
 
 def extra_builtins(request):
@@ -26,6 +27,7 @@ def settings(request):
             "KEYSTONE_GIT_COMMIT_HASH": _settings.KEYSTONE_GIT_COMMIT_HASH,
             "COLAB_MAX_FILE_SIZE_BYTES": _settings.COLAB_MAX_FILE_SIZE_BYTES,
             "SUPPORTED_COLAB_JOBFILE_FILENAMES": _settings.SUPPORTED_COLAB_JOBFILE_FILENAMES,
+            "ALLOW_INACTIVE_USER_AS_VIEWER": _settings.ALLOW_INACTIVE_USER_AS_VIEWER,
         }
     }
 
@@ -38,4 +40,5 @@ def helpers(request):
         ),
         "intcomma": "{:,}".format,
         "CollectionTypes": CollectionTypes,
+        "Permissions": Permissions,
     }

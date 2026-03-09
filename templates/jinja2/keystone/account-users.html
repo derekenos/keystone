@@ -1,5 +1,6 @@
 {% set breadcrumbs = (("Account", "account"),) %}
 {% set account_max_users_reached = user.account.user_set.count() >= user.account.max_users %}
+{% set has_admin_permissions = user.has_perm(Permissions.ADMIN_ACCOUNT, user.account) %}
 
 {% extends 'keystone/base.html' %}
 
@@ -34,7 +35,7 @@ Account
 {% block content %}
 <div class="row">
   <div class="large-12 columns">
-    {% if account_max_users_reached %}
+    {% if account_max_users_reached and has_admin_permissions %}
     <p class="alert alert-info">
       Your account has reached its maximum number of allowed users. Please contact your account administrator if you need to create a new user.
     </p>
@@ -42,10 +43,9 @@ Account
     <arch-user-table
       accountId="{{ user.account.id }}"
       userId="{{ user.id }}"
-      {{ "userIsStaff" if user.is_superuser or user.is_staff else "" }}
-      userRole='{{ user.role }}'
       {{ "accountMaxUsersReached" if account_max_users_reached else "" }}
-      {{ "inactive-users-become-viewers" if inactive_users_become_viewers else "" }}
+      {{ "inactive-users-become-viewers" if settings.ALLOW_INACTIVE_USER_AS_VIEWER else "" }}
+      {{ "readonly" if not has_admin_permissions else "" }}
     >
     </arch-user-table>
   </div>

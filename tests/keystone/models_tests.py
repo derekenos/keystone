@@ -377,16 +377,15 @@ class TestUser:
         assert exc_info.value.args[0].startswith("username is immutable")
 
     @mark.django_db
-    def test_is_viewer(self, make_user, make_account):
-        # User.is_viewer returns True if the user role=VIEWER or if the
-        # user's account or user itself is inactive.
+    def test_effective_role(self, make_user, make_account):
+        # User.effective_role returns the computed, runtime role of the user.
         for make_user_kwargs, expected in (
-            ({}, False),
-            ({"role": UserRoles.VIEWER}, True),
-            ({"is_active": False}, True),
-            ({"account": make_account(is_active=False)}, True),
+            ({}, UserRoles.USER),
+            ({"role": UserRoles.VIEWER}, UserRoles.VIEWER),
+            ({"is_active": False}, UserRoles.VIEWER),
+            ({"account": make_account(is_active=False)}, UserRoles.VIEWER),
         ):
-            assert make_user(**make_user_kwargs).is_viewer == expected
+            assert make_user(**make_user_kwargs).effective_role == expected
 
     @mark.django_db
     def test_job_start_get_job_status(self, make_jobstart):
