@@ -25,7 +25,10 @@ export default class API<RowT> {
     dataTable.getHitsOrDistinctQueryApiPath = (extraParams = {}) => {
       const field = extraParams.distinct;
       const { apiCollectionEndpoint } = dataTable.props;
-      return `${apiCollectionEndpoint}/filter_values?field=${field}`;
+      const optedOut =
+        Object.fromEntries(dataTable.props.apiStaticParamPairs)["opted_out"] ||
+        "false";
+      return `${apiCollectionEndpoint}/filter_values?field=${field}&opted_out=${optedOut}`;
     };
   }
 

@@ -123,7 +123,7 @@ def make_user():
 def make_user_dataset(
     make_collection, make_dataset, make_jobstart, make_jobcomplete, make_jobfile
 ):
-    def f(user, collection=None):
+    def f(user, collection=None, state=models.JobEventTypes.FINISHED):
         # Creating a JobStart for a JobType with can_run = True will result in
         # the automatic creation of a Dataset.
         if collection is None:
@@ -136,7 +136,7 @@ def make_user_dataset(
         job_complete = make_jobcomplete(job_start=job_start)
         make_jobfile(job_complete=job_complete, size_bytes=COLAB_MAX_FILE_SIZE_BYTES)
         dataset = models.Dataset.objects.get(job_start=job_start)
-        dataset.state = models.JobEventTypes.FINISHED
+        dataset.state = state
         dataset.finished_time = datetime.now().replace(tzinfo=timezone.utc)
         dataset.save()
         return dataset

@@ -736,9 +736,16 @@ def list_collections(request, filters: CollectionFilterSchema = Query(...)):
 @paginate
 def collections_filter_values(request, field: str):
     """Retrieve the distinct values for a specific Collection field."""
+    user = request.user
+    if request.GET.get("opted_out") not in ("true", "1"):
+        queryset = Collection.user_queryset(user)
+    else:
+        queryset = Collection.user_queryset(user, include_opted_out=True).filter(
+            CollectionUserSettings.user_opt_out_exists_filter(user)
+        )
     filter_values = list(
         get_model_queryset_filter_values(
-            Collection.user_queryset(request.user),
+            queryset,
             field,
             CollectionFilterSchema,
         )
@@ -747,7 +754,7 @@ def collections_filter_values(request, field: str):
     # SPECIAL-type collections.
     return filter_values + [
         (x, x)
-        for x in Collection.objects.filter(
+        for x in queryset.filter(
             collection_type="SPECIAL", metadata__type_displayname__isnull=False
         )
         .exclude(metadata__type_displayname__in=filter_values)
@@ -875,8 +882,22 @@ def list_datasets(request, filters: DatasetFilterSchema = Query(...)):
 @paginate
 def datasets_filter_values(request, field: str):
     """Retrieve the distinct values for a specific Dataset field."""
+    user = request.user
+    if request.GET.get("opted_out") not in ("true", "1"):
+        queryset = Dataset.user_queryset(user)
+    else:
+        queryset = Dataset.user_queryset(
+            user, include_opted_out=True, include_opted_out_collections=True
+        ).filter(
+            Q(DatasetUserSettings.user_opt_out_exists_filter(user))
+            | Q(
+                CollectionUserSettings.user_opt_out_exists_filter(
+                    user, collection_path="job_start__collection"
+                )
+            )
+        )
     return get_model_queryset_filter_values(
-        Dataset.user_queryset(request.user),
+        queryset,
         field,
         DatasetFilterSchema,
     )
