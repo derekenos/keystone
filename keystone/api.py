@@ -17,12 +17,12 @@ from typing import (
 import django.utils
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.forms import model_to_dict
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError, OperationalError, transaction
-from django.db.models import Count, Exists, OuterRef, Q, QuerySet, Subquery
-from django.db.models.functions import Coalesce
+from django.db.models import CharField, Count, Exists, OuterRef, Q, QuerySet, Subquery
+from django.db.models.functions import Cast, Coalesce
 from django.templatetags.static import static
 from django.utils.datastructures import MultiValueDict
 from django.http import (
@@ -281,12 +281,17 @@ def get_model_queryset_filter_values(queryset, field_path, filter_schema):
     field_name = dot_to_dunder(field_path)
     # Return a 400 if field_name is not defined in the filter schema.
     filter_schema_props = filter_schema.schema()["properties"]
-    if field_name == "search" or field_name not in filter_schema_props:
+    if field_name not in filter_schema_props:
         raise HttpError(400, f"Filtering not supported for field: {field_path}")
     # Use the filter schema to de-alias the field path.
     field_prop_q = filter_schema_props[field_name].get("q")
     if field_prop_q is not None and isinstance(field_prop_q, str):
         field_name = field_prop_q.removesuffix("__in")
+    # Attempt to lookup the field.
+    try:
+        field = find_field_from_lookup(queryset.model, field_name)
+    except FieldDoesNotExist as e:
+        raise HttpError(400, f"Filtering not supported for field: {field_name}") from e
     # Do the query.
     values = list(
         queryset.filter(**{f"{field_name}__isnull": False})
@@ -294,7 +299,6 @@ def get_model_queryset_filter_values(queryset, field_path, filter_schema):
         .distinct()
     )
     # If the ultimate model field is a TextChoice, return (value, displayValue) tuples.
-    field = find_field_from_lookup(queryset.model, field_name)
     value_display_map = dict(field.choices or ())
     return [(v, value_display_map.get(v, v)) for v in values]
 
@@ -736,23 +740,36 @@ def list_collections(request, filters: CollectionFilterSchema = Query(...)):
 @paginate
 def collections_filter_values(request, field: str):
     """Retrieve the distinct values for a specific Collection field."""
-    filter_values = list(
-        get_model_queryset_filter_values(
-            Collection.user_queryset(request.user),
-            field,
-            CollectionFilterSchema,
+    user = request.user
+    if request.GET.get("opted_out") not in ("true", "1"):
+        queryset = Collection.user_queryset(user)
+    else:
+        queryset = Collection.user_queryset(user, include_opted_out=True).filter(
+            CollectionUserSettings.user_opt_out_exists_filter(user)
         )
-    )
-    # Also look up the distinct metadata.type_displayname values for
-    # SPECIAL-type collections.
-    return filter_values + [
-        (x, x)
-        for x in Collection.objects.filter(
-            collection_type="SPECIAL", metadata__type_displayname__isnull=False
+    # Leverage get_model_queryset_filter_values() for simple, non-collection-type fields.
+    if field != "collection_type":
+        return list(
+            get_model_queryset_filter_values(
+                queryset,
+                field,
+                CollectionFilterSchema,
+            )
         )
-        .exclude(metadata__type_displayname__in=filter_values)
-        .distinct("metadata__type_displayname")
-        .values_list("metadata__type_displayname", flat=True)
+    # Handle collection_type values.
+    # Create a value -> displayname map from CollectionTypes.choices
+    display_map = dict(CollectionTypes.choices)
+    # If Collection.metadata defines a type_displayname, use that by casting to CharField and
+    # stripping the surrounding quotes, otherwise use Collection.collection_type, and translate
+    # all values through display_map.
+    return [
+        ((y := x.strip('"')), display_map.get(y, y))
+        for x in queryset.values_list(
+            Coalesce(
+                Cast("metadata__type_displayname", CharField()), "collection_type"
+            ),
+            flat=True,
+        )
     ]
 
 
@@ -875,8 +892,22 @@ def list_datasets(request, filters: DatasetFilterSchema = Query(...)):
 @paginate
 def datasets_filter_values(request, field: str):
     """Retrieve the distinct values for a specific Dataset field."""
+    user = request.user
+    if request.GET.get("opted_out") not in ("true", "1"):
+        queryset = Dataset.user_queryset(user)
+    else:
+        queryset = Dataset.user_queryset(
+            user, include_opted_out=True, include_opted_out_collections=True
+        ).filter(
+            Q(DatasetUserSettings.user_opt_out_exists_filter(user))
+            | Q(
+                CollectionUserSettings.user_opt_out_exists_filter(
+                    user, collection_path="job_start__collection"
+                )
+            )
+        )
     return get_model_queryset_filter_values(
-        Dataset.user_queryset(request.user),
+        queryset,
         field,
         DatasetFilterSchema,
     )

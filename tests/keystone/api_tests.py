@@ -22,7 +22,9 @@ from keystone.api import CreateUserSchema
 from keystone.models import (
     Collection,
     CollectionTypes,
+    CollectionUserSettings,
     Dataset,
+    DatasetUserSettings,
     JobEventTypes,
     JobType,
     Team,
@@ -116,12 +118,22 @@ class Client(_Client):
     def get_dataset_publication_info(self, dataset_id):
         return self.get(f"/api/datasets/{dataset_id}/publication")
 
+    def get_dataset_filter_values(self, field, opted_out=False):
+        return self.get(
+            f"/api/datasets/filter_values?field={field}&opted_out={json.dumps(opted_out)}"
+        )
+
     def list_collections(self, **params):
         return self.get("/api/collections", params)
 
     def update_collection(self, collection, update_d):
         return self.patch(
             f"/api/collections/{collection.id}", update_d, "application/json"
+        )
+
+    def get_collection_filter_values(self, field, opted_out=False):
+        return self.get(
+            f"/api/collections/filter_values?field={field}&opted_out={json.dumps(opted_out)}"
         )
 
 
@@ -835,6 +847,39 @@ def test_generate_dataset_from_empty_custom_collection_not_allowed(
     assert res.status_code == HTTPStatus.SERVICE_UNAVAILABLE
 
 
+@mark.django_db
+def test_dataset_filter_values(make_user, make_user_dataset):
+    """A user can retrieve the set of available Dataset field facet values."""
+    user = make_user()
+    for state in ("QUEUED", "RUNNING"):
+        make_user_dataset(user=user, state=state)
+    # Make opted-out datasets with the states CANCELLED (opted-opt directly),
+    # FAILED (opted-out via collection), and FINISHED (opted-out directly and via collection).
+    ds = make_user_dataset(user=user, state="CANCELLED")
+    DatasetUserSettings.objects.create(dataset=ds, user=user, opt_out=True)
+    ds = make_user_dataset(user=user, state="FAILED")
+    CollectionUserSettings.objects.create(
+        collection=ds.job_start.collection, user=user, opt_out=True
+    )
+    ds = make_user_dataset(user=user, state="FINISHED")
+    DatasetUserSettings.objects.create(dataset=ds, user=user, opt_out=True)
+    CollectionUserSettings.objects.create(
+        collection=ds.job_start.collection, user=user, opt_out=True
+    )
+    # Check that dataset_type values can be retrieved for the non-opted-out datasets.
+    client = Client(user)
+    assert {
+        x[0] for x in client.get_dataset_filter_values("state").json()["items"]
+    } == {"QUEUED", "RUNNING"}
+    # Check that dataset_type values can be retrieved for the opted-out datasets.
+    assert {
+        x[0]
+        for x in client.get_dataset_filter_values("state", opted_out=True).json()[
+            "items"
+        ]
+    } == {"CANCELLED", "FAILED", "FINISHED"}
+
+
 ###############################################################################
 # /api/collections tests
 ###############################################################################
@@ -983,3 +1028,29 @@ def test_collection_empty_filter_works(make_user, make_collection):
         nonempty_collection.id,
         unknown_collection.id,
     }
+
+
+@mark.django_db
+def test_collection_filter_values(make_user, make_collection):
+    """A user can retrieve the set of available Collection field facet values."""
+    user = make_user()
+    for collection_type in ("CUSTOM", "AIT"):
+        c = make_collection(collection_type=collection_type)
+        c.users.add(user)
+    # Make an opted-out SPECIAL-type collection.
+    c = make_collection(collection_type="SPECIAL")
+    c.users.add(user)
+    CollectionUserSettings.objects.create(collection=c, user=user, opt_out=True)
+    # Check that collection_type values can be retrieved for the non-opted-out collections.
+    client = Client(user)
+    assert {
+        x[0]
+        for x in client.get_collection_filter_values("collection_type").json()["items"]
+    } == {"CUSTOM", "AIT"}
+    # Check that collection_type values can be retrieved for the opted-out collections.
+    assert {
+        x[0]
+        for x in client.get_collection_filter_values(
+            "collection_type", opted_out=True
+        ).json()["items"]
+    } == {"SPECIAL"}
