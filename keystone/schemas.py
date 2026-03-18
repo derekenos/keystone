@@ -618,24 +618,12 @@ class DatasetPublicationMetadata(Schema):
     title: List[str] = None
 
 
-class GlobalJobParameters(Schema):
-    """Configuration parameters common to all jobs."""
-
-    sample: bool
-
-
-class NamedEntityExtractionParameters(GlobalJobParameters):
-    """NamedEntityExtraction-specific job configuration parameters."""
-
-    lang: str
-
-
 class DatasetGenerationRequest(Schema):
     """Request POST payload schema for Dataset generation."""
 
     collection_id: int
     job_type_id: str
-    params: NamedEntityExtractionParameters | GlobalJobParameters
+    params: dict
 
 
 class SubCollectionCreationRequest(CdxFilterQuery):
