@@ -1315,7 +1315,7 @@ def generate_dataset(request, payload: DatasetGenerationRequest):
         user,
         input_spec,
         str(job_type.id),  # Cast UUID to serializable
-        payload.params.dict(),
+        payload.params,
     )
 
 
