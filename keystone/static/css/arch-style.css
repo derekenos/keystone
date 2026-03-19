@@ -215,37 +215,6 @@ div.graph-description {
     overflow: auto;
 }
 
-/* Inherited AIT table CSS omit right padding from last <th>, so add it back */
-.csv-preview th:last-child {
-  padding-right: 0.7rem;
-}
-
-/* CDX preview table */
-/* massaged url */
-table#cdx-preview td.cdx-N,
-/* original url */
-table#cdx-preview td.cdx-a,
-/* redirect */
-table#cdx-preview td.cdx-r {
-  max-width: 20rem;
-}
-/* date */
-table#cdx-preview td.cdx-b {
-  max-width: 10rem;
-}
-/* mime type of original document */
-table#cdx-preview td.cdx-m {
-  max-width: 12rem;
-}
-/* response code */
-table#cdx-preview td.cdx-s {
-  max-width: 6rem;
-}
-/* new style checksum */
-table#cdx-preview td.cdx-k {
-  max-width: 22rem;
-}
-
 .card-container {
   display: flex;
   justify-content: space-between;
