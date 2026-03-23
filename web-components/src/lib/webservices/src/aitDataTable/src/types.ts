@@ -48,7 +48,15 @@ export interface DataTable<RowT> extends HTMLElement {
     apiItemsTemplateFn: null | ((rows: Array<RowT>) => string);
     apiStaticParamPairs: Array<[string, string]>;
     cellRenderers: Array<
-      | ((field: ValueOf<RowT>, row: RowT) => string | HTMLElement)
+      | ((
+          value: ValueOf<RowT>,
+          row: RowT,
+          // For Array-type field values, the renderer is invoked separately on each element (as `value`),
+          // in which case `valueIdx` (the current element index) and `values` (the field values Array) will
+          // be defined.
+          valueIdx: undefined | number,
+          values: undefined | Array<ValueOf<RowT>>
+        ) => string | HTMLElement)
       | Record<string, string>
       | undefined
     >;

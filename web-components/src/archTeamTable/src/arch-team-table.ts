@@ -37,7 +37,9 @@ export class ArchTeamTable extends ArchDataTable<Team> {
     this.apiStaticParamPairs = [];
     this.cellRenderers = [
       undefined,
-      (member) => (member as unknown as Team["members"][0]).username,
+      (member, _, idx, members) =>
+        (member as unknown as Team["members"][0]).username +
+        (members && (idx as number) < members.length - 1 ? ", " : ""),
     ];
     this.columns = ["name", "members"];
     this.columnHeaders = ["Name", "Members"];

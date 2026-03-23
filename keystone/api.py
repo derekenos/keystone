@@ -21,7 +21,16 @@ from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.forms import model_to_dict
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError, OperationalError, transaction
-from django.db.models import CharField, Count, Exists, OuterRef, Q, QuerySet, Subquery
+from django.db.models import (
+    CharField,
+    Count,
+    Exists,
+    OuterRef,
+    Prefetch,
+    Q,
+    QuerySet,
+    Subquery,
+)
 from django.db.models.functions import Cast, Coalesce
 from django.templatetags.static import static
 from django.utils.datastructures import MultiValueDict
@@ -1217,8 +1226,12 @@ def list_teams(request, filters: TeamFilterSchema = Query(...)):
     if not user.has_perm(Permissions.LIST_ACCOUNT_TEAMS):
         filter_kwargs["members"] = user
     queryset = filters.filter(
-        Team.objects.filter(**filter_kwargs).prefetch_related("members")
-    )
+        Team.objects.filter(**filter_kwargs).prefetch_related(
+            # Sort members by username ascending.
+            Prefetch("members", queryset=User.objects.order_by("username"))
+        )
+    ).distinct()
+
     return apply_sort_param(request.GET.get("sort"), queryset, TeamSchema)
 
 
