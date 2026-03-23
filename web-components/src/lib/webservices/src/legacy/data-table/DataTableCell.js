@@ -61,11 +61,11 @@ export default class DataTableCell extends HTMLTableCellElement {
       // Apply the function or object/map-type renderer.
       const render =
         typeof renderer === "function"
-          ? (v, rowData, idx, arr) => renderer(v, rowData, idx, arr) ?? ""
+          ? (v, idx, arr) => renderer(v, rowData, idx, arr) ?? ""
           : (v) => renderer[v] ?? "";
       // If value is an array, apply the renderer separately to each element.
       if (Array.isArray(value)) {
-        value.forEach((v, idx, arr) => childEls.push(render(v, rowData, idx, arr)));
+        value.forEach((v, idx, arr) => childEls.push(render(v, idx, arr)));
       } else {
         childEls.push(render(value));
       }
