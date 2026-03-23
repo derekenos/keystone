@@ -84,7 +84,7 @@ export class ArchJobButton extends LitElement {
   render() {
     const { jobParameters, jobName, collectionName } = this;
     return html`
-      <arch-modal title="Generate Dataset">
+      <arch-modal modalTitle="Generate Dataset">
         <div slot="content">
           <p>
             You're about to generate a <strong>${jobName}</strong> dataset from

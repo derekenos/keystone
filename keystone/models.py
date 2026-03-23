@@ -749,6 +749,7 @@ class Dataset(models.Model):
         permissions = (
             ("change_dataset_teams", "Change Dataset Teams"),
             ("publish_dataset", "Publish a Dataset"),
+            ("cancel_dataset", "Cancel an in-progress Dataset"),
         )
 
     def get_download_filename(self, jobfile_filename, preview=False):
@@ -854,6 +855,12 @@ class Dataset(models.Model):
                 return (
                     user.id == self.job_start.user_id
                     and user.effective_role != UserRoles.VIEWER
+                )
+            case Permissions.CANCEL_DATASET:
+                # A Dataset initiator is allowed to cancel an in-progress job.
+                return (
+                    user.id == self.job_start.user_id
+                    and self.state == JobEventTypes.RUNNING
                 )
             case _:
                 return False

@@ -31,7 +31,7 @@ export class ArchCreateNewTeamModal extends ArchModal {
     super.connectedCallback();
     this.scrollable = true;
     this.modalSize = "m";
-    this.title = "Create a New Team";
+    this.modalTitle = "Create a New Team";
     this.submitButtonText = "Create";
     this.content = html`
       <form @submit=${this.submit} validate>

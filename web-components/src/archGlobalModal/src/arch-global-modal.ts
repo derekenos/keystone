@@ -52,7 +52,7 @@ export class ArchGlobalModal extends ArchModal {
       e as CustomEvent<GlobalModalDetail>
     ).detail;
     this.elementToFocusOnClose = elementToFocusOnClose;
-    this.title = `⚠ Error`;
+    this.modalTitle = `⚠ Error`;
     this.contentSlot.replaceChildren(content);
     this.headingEl.classList.add("error");
     this.open = true;
@@ -63,7 +63,7 @@ export class ArchGlobalModal extends ArchModal {
       e as CustomEvent<GlobalModalDetail>
     ).detail;
     this.elementToFocusOnClose = elementToFocusOnClose;
-    this.title = title;
+    this.modalTitle = title;
     this.contentSlot.replaceChildren(content);
     this.headingEl.classList.remove("error");
     this.open = true;

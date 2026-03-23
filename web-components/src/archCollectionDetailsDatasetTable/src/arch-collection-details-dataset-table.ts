@@ -11,6 +11,8 @@ import {
 } from "../../lib/helpers";
 import { Topics } from "../../lib/pubsub";
 import { Dataset, ProcessingState, ValueOf } from "../../lib/types";
+import "../../archCancelJobButton/index";
+
 import Styles from "./styles";
 
 @customElement("arch-collection-details-dataset-table")
@@ -20,6 +22,8 @@ export class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
   hideGenerateDataset = false;
   @property({ type: Boolean, attribute: "is-opted-out-collection" })
   isOptedOutCollection = false;
+  @property({ type: String, attribute: "cancel-job-icon-url" })
+  cancelJobIconUrl!: string;
 
   @state() columnNameHeaderTooltipMap = {
     category:
@@ -51,6 +55,28 @@ export class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
     });
   }
 
+  renderStateCell(
+    state: ValueOf<Dataset>,
+    dataset: Dataset
+  ): string | HTMLElement {
+    const { cancelJobIconUrl } = this;
+    const displayState = EventTypeDisplayMap[state as Dataset["state"]];
+    return !isActiveProcessingState(dataset.state)
+      ? displayState
+      : createElement("div", {
+          children: [
+            displayState,
+            createElement("arch-cancel-job-button", {
+              datasetId: dataset.id,
+              jobName: dataset.name,
+              collectionName: dataset.collection_name,
+              iconStyleButtonUrl: cancelJobIconUrl,
+              style: "vertical-align: middle; margin: 0 0 0.2em 0.5em;",
+            }),
+          ],
+        });
+  }
+
   willUpdate(_changedProperties: PropertyValues) {
     super.willUpdate(_changedProperties);
 
@@ -72,7 +98,7 @@ export class ArchCollectionDetailsDatasetTable extends ArchDataTable<Dataset> {
       (categoryName) => categoryName as Dataset["category_name"],
       (isSample) =>
         BoolDisplayMap[(isSample as Dataset["is_sample"]).toString()],
-      (state) => EventTypeDisplayMap[state as Dataset["state"]],
+      this.renderStateCell.bind(this),
       (startTime) => isoStringToDateString(startTime as Dataset["start_time"]),
       (finishedTime) =>
         finishedTime === null

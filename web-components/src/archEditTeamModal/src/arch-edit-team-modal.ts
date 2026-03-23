@@ -80,7 +80,7 @@ export class ArchEditTeamModal extends ArchModal {
     this.scrollable = true;
     this.modalSize = "m";
     this.submitButtonText = "Save";
-    this.title = "Edit Team";
+    this.modalTitle = "Edit Team";
     this.addEventListener("sp-closed", this.onCloseHandler.bind(this));
   }
 

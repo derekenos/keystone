@@ -163,7 +163,7 @@ export class ArchEditUserModal extends ArchModal {
     this.scrollable = true;
     this.modalSize = "m";
     this.submitButtonText = "Save";
-    this.title = profileMode ? "Edit Profile" : "Edit User";
+    this.modalTitle = profileMode ? "Edit Profile" : "Edit User";
     this.addEventListener("sp-opened", this.onOpenHandler.bind(this));
     this.addEventListener("sp-closed", this.onCloseHandler.bind(this));
   }

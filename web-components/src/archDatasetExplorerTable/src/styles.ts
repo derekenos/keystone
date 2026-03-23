@@ -19,7 +19,7 @@ export default [
     }
 
     data-table > table > thead > tr > th.state {
-      width: 6em;
+      width: 7em;
     }
 
     data-table > table > thead > tr > th.started {
