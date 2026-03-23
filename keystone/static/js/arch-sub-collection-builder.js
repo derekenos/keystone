@@ -92,7 +92,7 @@ var nm,tm=4294967295,rm=Array.prototype,om=Object.prototype.hasOwnProperty,im=S?
       font-weight: bold;
     }
   `];let vm=um=class extends r{getCollectionName(e){for(const n of this.collections)if(n.id===e)return n.name;return""}render(){var e;const{data:n}=this,t=void 0===n?[]:um.dataKeyTitlePairs.filter((([e])=>void 0!==n[e])).map((([e,t])=>[t,(Array.isArray(n[e])?n[e]:[n[e]]).map((n=>`<span class="filter-value">${um.dataKeyValueFormatterMap[e](n)}</span>`)).join(" or ")]));return o`
-      <arch-modal title="Review Your Custom Collection" modalSize="l">
+      <arch-modal modalTitle="Review Your Custom Collection" modalSize="l">
         <div slot="content">
           ${void 0===n?o``:o`
             <p>

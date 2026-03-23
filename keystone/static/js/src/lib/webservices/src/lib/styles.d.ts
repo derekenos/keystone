@@ -1,7 +1,13 @@
 export declare const linkColor: import("lit").CSSResult;
 export declare const linkHoverColor: import("lit").CSSResult;
+export declare const dangerButtonBgColor: import("lit").CSSResult;
+export declare const dangerButtonFgColor: import("lit").CSSResult;
+export declare const dangerButtonHoverBgColor: import("lit").CSSResult;
+export declare const dangerButtonHoverBorderColor: import("lit").CSSResult;
 export declare const defaultButtonBgColor: import("lit").CSSResult;
 export declare const defaultButtonFgColor: import("lit").CSSResult;
+export declare const defaultButtonHoverBgColor: import("lit").CSSResult;
+export declare const defaultButtonHoverFgColor: import("lit").CSSResult;
 export declare const primaryButtonBgColor: import("lit").CSSResult;
 export declare const primaryButtonFgColor: import("lit").CSSResult;
 export declare const primaryButtonHoverBgColor: import("lit").CSSResult;

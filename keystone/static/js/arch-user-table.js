@@ -39,7 +39,7 @@ import{i as e,_ as t,e as a,y as s,a as r}from"./chunk-query-assigned-elements.j
     div.error.show {
       display: block;
     }
-  `];let v=class extends b{constructor(){super(),this.accountTeams=[],u.teams.list().then((e=>{this.accountTeams=e.items,this.renderContent()}))}set unhandledError(e){const{errorEl:t}=this;e?t.classList.add("show"):t.classList.remove("show")}connectedCallback(){super.connectedCallback(),this.scrollable=!0,this.modalSize="m",this.title="Create a New User",this.submitButtonText="Create",this.renderContent(),this.addEventListener("sp-closed",this.onCloseHandler.bind(this))}renderContent(){this.content=s`
+  `];let v=class extends b{constructor(){super(),this.accountTeams=[],u.teams.list().then((e=>{this.accountTeams=e.items,this.renderContent()}))}set unhandledError(e){const{errorEl:t}=this;e?t.classList.add("show"):t.classList.remove("show")}connectedCallback(){super.connectedCallback(),this.scrollable=!0,this.modalSize="m",this.modalTitle="Create a New User",this.submitButtonText="Create",this.renderContent(),this.addEventListener("sp-closed",this.onCloseHandler.bind(this))}renderContent(){this.content=s`
       <form validate>
         <input type="hidden" name="account-id" value=${this.accountId} />
 

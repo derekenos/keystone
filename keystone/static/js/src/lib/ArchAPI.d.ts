@@ -15,6 +15,7 @@ export default class ArchAPI {
     };
     static get datasets(): {
         get: (params?: ApiParams<Dataset>) => Promise<FilteredApiResponse<Dataset>>;
+        cancel: (datasetId: Dataset["id"]) => Promise<null>;
         updateTeams: (datasetId: Dataset["id"], teams: Array<Team>) => Promise<null>;
         updateUserSettings: (datasetId: Dataset["id"], settings: DatasetSettings) => Promise<null>;
         publication: {

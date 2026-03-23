@@ -313,7 +313,7 @@ const ht=globalThis,vt=ht.trustedTypes,gt=vt?vt.createPolicy("lit-html",{createH
       max-height: 50vh;
       overflow-y: auto;
     }
-  `];let pe=class extends(me(u)){constructor(){super(...arguments),this.hideCancelButton=!1,this.hideSubmitButton=!1,this.cancelButtonClass="",this.cancelButtonText="Cancel",this.submitButtonClass="primary",this.submitButtonText="Confirm",this.title="",this.content=s``}renderDialogContent(){const{cancelButtonClass:t,cancelButtonText:o,content:e,hideCancelButton:r,hideSubmitButton:n,submitButtonClass:i,submitButtonText:c,title:a}=this;return s`
+  `];let pe=class extends(me(u)){constructor(){super(...arguments),this.hideCancelButton=!1,this.hideSubmitButton=!1,this.cancelButtonClass="",this.cancelButtonText="Cancel",this.submitButtonClass="primary",this.submitButtonText="Confirm",this.modalTitle="",this.content=s``}renderDialogContent(){const{cancelButtonClass:t,cancelButtonText:o,content:e,hideCancelButton:r,hideSubmitButton:n,submitButtonClass:i,submitButtonText:c,modalTitle:a}=this;return s`
       <h2 slot="heading">${a}</h2>
       <slot name="content">${e}</slot>
       <slot name="buttons">
@@ -334,5 +334,5 @@ const ht=globalThis,vt=ht.trustedTypes,gt=vt?vt.createPolicy("lit-html",{createH
               </button>`}
         </div>
       </slot>
-    `}submit(t){t&&(t.preventDefault(),t.stopPropagation()),this.dispatchEvent(new Event("submit",{bubbles:!0,composed:!0})),this.open=!1}};pe.styles=be,c([r({type:Boolean})],pe.prototype,"hideCancelButton",void 0),c([r({type:Boolean})],pe.prototype,"hideSubmitButton",void 0),c([r({type:String})],pe.prototype,"cancelButtonClass",void 0),c([r({type:String})],pe.prototype,"cancelButtonText",void 0),c([r({type:String})],pe.prototype,"submitButtonClass",void 0),c([r({type:String})],pe.prototype,"submitButtonText",void 0),c([r({type:String})],pe.prototype,"title",void 0),c([r()],pe.prototype,"content",void 0),pe=c([a("arch-modal")],pe);export{pe as A,Eo as I,L as O,B as a,_ as o,Ko as s};
+    `}submit(t){t&&(t.preventDefault(),t.stopPropagation()),this.dispatchEvent(new Event("submit",{bubbles:!0,composed:!0})),this.open=!1}};pe.styles=be,c([r({type:Boolean})],pe.prototype,"hideCancelButton",void 0),c([r({type:Boolean})],pe.prototype,"hideSubmitButton",void 0),c([r({type:String})],pe.prototype,"cancelButtonClass",void 0),c([r({type:String})],pe.prototype,"cancelButtonText",void 0),c([r({type:String})],pe.prototype,"submitButtonClass",void 0),c([r({type:String})],pe.prototype,"submitButtonText",void 0),c([r({type:String})],pe.prototype,"modalTitle",void 0),c([r()],pe.prototype,"content",void 0),pe=c([a("arch-modal")],pe);export{pe as A,Eo as I,L as O,B as a,_ as o,Ko as s};
 //# sourceMappingURL=chunk-arch-modal.js.map

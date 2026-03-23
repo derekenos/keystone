@@ -13,7 +13,7 @@ export declare class ArchModal extends ArchModal_base {
     cancelButtonText: string;
     submitButtonClass: string;
     submitButtonText: string;
-    title: string;
+    modalTitle: string;
     content: TemplateResult;
     static styles: import("lit").CSSResult[];
     renderDialogContent(): TemplateResult<1>;
