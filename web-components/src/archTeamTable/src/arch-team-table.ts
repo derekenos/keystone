@@ -1,7 +1,7 @@
 import { PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
-import { Team, User, UserRoles } from "../../lib/types";
+import { Team, User } from "../../lib/types";
 import { toTitleCase } from "../../lib/helpers";
 import { Topics } from "../../lib/pubsub";
 
