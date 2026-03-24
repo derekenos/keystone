@@ -40,7 +40,7 @@ export interface DataTable<RowT> extends HTMLElement {
         apiItemTemplate: string | null;
         apiItemsTemplateFn: null | ((rows: Array<RowT>) => string);
         apiStaticParamPairs: Array<[string, string]>;
-        cellRenderers: Array<((field: ValueOf<RowT>, row: RowT) => string | HTMLElement) | Record<string, string> | undefined>;
+        cellRenderers: Array<((value: ValueOf<RowT>, row: RowT, valueIdx: undefined | number, values: undefined | Array<ValueOf<RowT>>) => string | HTMLElement) | Record<string, string> | undefined>;
         columnHeaders: Array<string>;
         columns: Array<string>;
         columnSortParamMap: Record<string, string>;
