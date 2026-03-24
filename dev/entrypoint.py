@@ -51,8 +51,26 @@ DEFAULT_COLLECTIONS = (
     {
         "arch_id": "SPECIAL-test-collection",
         "collection_type": CollectionTypes.SPECIAL,
-        "name": "Test Collection",
+        "description": "This collection contains a sample WARC (web archive) file for generating a variety of datasets.",
+        "info_url": "https://archive.org/download/sample-warc-file/IIPC-COVID-Announcement.warc.gz",
+        "name": "WARC Test Collection",
         "size_bytes": 1023207,
+    },
+    {
+        "arch_id": "SPECIAL-audio-test-collection",
+        "collection_type": CollectionTypes.SPECIAL,
+        "description": "This collection contains a sample audio file for generating Speech recognition datasets.",
+        "info_url": "https://archive.org/details/tvtunes_11560/Spongebob%20Squarepants.mp3",
+        "name": "Audio Test Collection",
+        "size_bytes": 452643,
+        "metadata": {
+            "input_spec": {
+                "type": "files",
+                "dataSource": "hdfs",
+                "dataLocation": "/user/arch/arch-test-collection/*.mp3",
+                "dataMime": {"mp3": "audio/mp3"},
+            }
+        },
     },
 )
 
@@ -99,7 +117,7 @@ def ensure_collections(users):
     """Create the default collections."""
     for collection_d in DEFAULT_COLLECTIONS:
         try:
-            collection = Collection.objects.get(**collection_d)
+            collection = Collection.objects.get(arch_id=collection_d["arch_id"])
         except Collection.DoesNotExist:
             collection = Collection.objects.create(**collection_d)
             print(f"Created collection: {collection_d}")
