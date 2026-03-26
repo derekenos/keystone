@@ -163,8 +163,18 @@ class User(AbstractUser):
         # settings object so that tests can leverage override_settings().
         if not self.is_active and not django_settings.ALLOW_INACTIVE_USER_AS_VIEWER:
             return False
-        # Superusers have all permissions.
-        if self.is_superuser:
+        # Superusers have all permissions, except in the case of actions on specific
+        # objects for which we must leverage obj.user_has_perm() on account of
+        # access being gated by the underlying user_queryset().
+        if self.is_superuser and (
+            obj is None
+            or perm
+            not in (
+                Permissions.GENERATE_DATASET,
+                Permissions.VIEW_COLLECTION,
+                Permissions.VIEW_DATASET,
+            )
+        ):
             return True
         if obj is None:
             # Attempt to check against unary user permissions.
