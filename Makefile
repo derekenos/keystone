@@ -20,32 +20,50 @@ $(KEYSTONE_VENV_PATH):
 
 venv: $(KEYSTONE_VENV_PATH)
 
-.PHONY: requirements.txt
-requirements.txt: venv
-	$(PIP_PATH)-compile \
+compile_requirements_txt = $(PIP_PATH)-compile \
 	--output-file requirements.txt \
 	--generate-hashes \
+	--no-emit-index-url \
+	--no-emit-trusted-host \
 	--strip-extras \
 	$(if $(extra_args), $(extra_args)) \
 	pyproject.toml
 
-.PHONY: requirements-dev.txt
-requirements-dev.txt: requirements.txt
-	$(PIP_PATH)-compile \
+.PHONY: requirements.txt
+requirements.txt: venv
+	$(call compile_requirements_txt)
+
+compile_requirements_dev_txt = $(PIP_PATH)-compile \
 	--constraint requirements.txt \
 	--output-file requirements-dev.txt \
 	--generate-hashes \
+	--no-emit-index-url \
+	--no-emit-trusted-host \
 	--strip-extras \
 	--extra dev \
 	$(if $(extra_args), $(extra_args)) \
 	pyproject.toml
 
-.PHONY: install-dev
+.PHONY: requirements-dev.txt
+requirements-dev.txt: requirements.txt
+	$(call compile_requirements_dev_txt)
+
+.PHONY: upgrade-dependencies
+upgrade-dependencies:
+ifndef SPECS
+	$(error SPECS string was not specified, e.g. make upgrade-dependencies SPECS="django==4.2.15")
+endif
+	$(eval extra_args := `for s in $(SPECS); do echo -n "--upgrade-package $$$$s "; done`)
+	$(call compile_requirements_txt)
+	$(call compile_requirements_dev_txt)
+
+
+.PHONY: install
 install: venv
 	$(PIP_PATH)-sync requirements-dev.txt
 	$(PIP_PATH) install --no-deps -e .
 
-.PHONY: install
+.PHONY: install-prod
 install-prod:
 	$(PIP_PATH)-sync requirements.txt
 	$(PIP_PATH) install --no-deps -e .

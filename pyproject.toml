@@ -16,7 +16,6 @@ dependencies = [
     "django",
     "django-ninja",
     "django-resized",
-    "gunicorn",
     "jinja2",
     "pillow",
     "psycopg[c]",
@@ -30,6 +29,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "black",
+    "gunicorn",
     "model_bakery",
     "pylint",
     "pylint-django",
